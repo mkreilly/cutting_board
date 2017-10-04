@@ -29,5 +29,10 @@ Tools to help slice parcels according to geography and information on where buil
 #### Assignment
 
 * We now have the parcel attributes assigned to building and located each within a single maz.  We can aggregate up to maz totals of residential units and non residential sqft (or jobs) and extra units to buildings based on where buildings currently exist.
-  We should also take into account building records without attributes at that point (e.g. a building record with no unit count in a MAZ that needs units should target that building record), and also a building footprint with no attributes (because the parcel didn't have attributes) is also a likely candidate.
-* In the end we will have building footprints assigned to sub-parcels assigned to MAZs.  The buildings will have unit counts and non residential square feet that sum to the maz unit counts and job spaces.  Some of the buildings will have geometry from OSM, and some will be circles at the parcel centroid.
+  * We should also take into account building records without attributes at that point (e.g. a building record with no unit count in a MAZ that needs units should target that building record), and also a building footprint with no attributes (because the parcel didn't have attributes) is also a likely candidate.
+  * In the end we will have building footprints assigned to sub-parcels assigned to MAZs.  The buildings will have unit counts and non residential square feet that sum to the maz unit counts and job spaces.  Some of the buildings will have geometry from OSM, and some will be circles at the parcel centroid.
+
+#### Other Tasks from SPANDEX
+
+* Condos and stacked detection
+* Join to jurisdictions and other administrative boundaries
