@@ -18,10 +18,10 @@ Tools to help slice parcels according to geography and information on where buil
   * These are assigned proportionally based on the built area (area of footprint times number of stories) of each footprint.
   * Small footprints (sheds, garages, etc) do not take these attributes.
   * Parcels that have attributes but no building footprint will be given a default geometry like a circle around the parcel centroid.
+  * Parcel attributes which were copied among multiple split parcels should be assigned carefully.  The attributes should be split among the building footprints associated with each of the subparcels of each parcel.
 
 #### Proposed Methodlogy (In Progress)
 
-* Parcel attributes which were copied among multiple split parcels should be assigned carefully.  The attributes should be split among the building footprints associated with each of the subparcels of each parcel.
 * Find non-developed parts of parcels.  Another key benefit of this approach is to identify parts of a parcel where there is not currently a building footprint.  These can be used e.g. to identify parking lots and thus areas that are more likely to develop.
 * Use CoStar for non-residential space
 * Add scheduled development events
