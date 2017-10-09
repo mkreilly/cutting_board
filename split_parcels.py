@@ -2,16 +2,19 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import time
+from shared import compute_pct_area, compute_area
 
 # This script joins parcels mazs and splits them along maz boundaries
 # it reads parcels.csv and mazs.csv and writes split_parcels.csv
 
 print "Loading parcels and mazs"
+print time.ctime()
 parcels = gpd.read_geocsv("parcels.csv")
 mazs = gpd.read_geocsv("mazs.csv")[["maz_id", "geometry"]]
 
 # join mazs to parcels
 print "Joining parcels to mazs"
+print time.ctime()
 joined_parcels = gpd.sjoin(parcels, mazs, how="inner", op='intersects')
 
 
@@ -65,14 +68,14 @@ def split_parcel(parcel, split_shapes, dont_split_pct_cutoff=.01,
 
 
 # this does the parcel splits
-print time.ctime()
-
 cnt = 0
 split_parcels = []
 apn_counts = joined_parcels.index.value_counts()
 bad_apns = ["999 999999999"]
+mazs.set_index("maz_id", inplace=True)
 
 print "Splitting parcels when there are overlaps"
+print time.ctime()
 for apn, count in apn_counts.iteritems():
 
     if apn in bad_apns:
@@ -93,8 +96,8 @@ for apn, count in apn_counts.iteritems():
 
     ret["orig_apn"] = apn
     # make a new unique apn when we split a parcel
-    ret["apn"] = [apn + "-" + str(i+1) for i in range(len(ret))]
-    new_parcels.append(ret)
+    ret["apn"] = [str(apn) + "-" + str(i+1) for i in range(len(ret))]
+    split_parcels.append(ret)
 
     cnt += 1
     if cnt % 100 == 0:
@@ -102,6 +105,7 @@ for apn, count in apn_counts.iteritems():
 
 split_parcels = pd.concat(split_parcels)
 
+print "Done splitting parcels"
 print time.ctime()
 
 

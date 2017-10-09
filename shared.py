@@ -1,5 +1,6 @@
 import pandas as pd
 import geopandas as gpd
+from shapely import wkt
 
 
 # someday this will be in geopandas
