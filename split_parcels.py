@@ -70,7 +70,7 @@ def split_parcel(parcel, split_shapes, dont_split_pct_cutoff=.01,
 # this does the parcel splits
 cnt = 0
 split_parcels = []
-apn_counts = joined_parcels.index.value_counts()
+apn_counts = joined_parcels.index.value_counts()[lambda x: x > 1]
 bad_apns = ["999 999999999"]
 mazs.set_index("maz_id", inplace=True)
 
@@ -79,10 +79,6 @@ print time.ctime()
 for apn, count in apn_counts.iteritems():
 
     if apn in bad_apns:
-        continue
-
-    if count < 2:
-        # not an overlap, doesn't need to be split
         continue
 
     subset = joined_parcels.loc[apn]
@@ -121,4 +117,4 @@ split_parcels = gpd.GeoDataFrame(
     ])
 )
 
-split_parcels.to_csv("split_parcels.csv")
+split_parcels.to_csv("split_parcels.csv", index=False)

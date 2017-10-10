@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import geopandas as gpd
 from shapely import wkt
 
@@ -38,3 +39,34 @@ def compute_pct_area(df, total_area):
     df["calc_area"] = compute_area(df).values
     df["pct_area"] = df["calc_area"] / total_area
     return df
+
+
+def compute_overlap_areas(overlaps, overlapees):
+    '''
+    After a spatial join is done, this computes the actual area of the overlap.
+    overlaps is the result of the spatial join (which contains geometry for the
+    overlaper) overlapees is the geometry of the right side of the join
+    the "index_right" column of overlaps should be the index of overlapees
+    '''
+    total_overlaps = len(overlaps)
+    cnt = 0
+    overlap_area = []
+    for index, overlap in overlaps.iterrows():
+        overlapee = overlapees.loc[overlap.index_right]
+
+        try:
+            overlap_poly = gpd.overlay(
+                gpd.GeoDataFrame([overlap]),
+                gpd.GeoDataFrame([overlapee]), how="intersection")
+        except:
+            overlap_area.append(np.nan)
+            print "Failed:", index
+            continue
+
+        if len(overlap_poly) == 0:
+            overlap_area.append(0)
+            continue
+
+        overlap_area.append(compute_area(overlap_poly).values[0])
+
+    return pd.Series(overlap_area, index=overlaps.index)

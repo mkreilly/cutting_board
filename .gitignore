@@ -1,6 +1,7 @@
 parcels.csv
 mazs.csv
 buildings.csv
+split_parcels.csv
 GeogXWalk2010_Blocks_MAZ_TAZ.csv
 .ipynb_checkpoints
 *.pyc

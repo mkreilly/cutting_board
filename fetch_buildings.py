@@ -11,6 +11,5 @@ buildings = osmnx.buildings.create_buildings_gdf(alameda.geometry)
 
 print time.ctime()
 
-#open("buildings.geojson", "w").write(buildings.to_json())
 buildings.to_csv("buildings.csv", encoding='utf-8')
 print time.ctime()
