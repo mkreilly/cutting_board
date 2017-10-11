@@ -54,7 +54,9 @@ def split_parcel(parcel, split_shapes, dont_split_pct_cutoff=.01,
 
     # now we need to make sure we don't split off very small portions
     split = overlay[overlay.pct_area >= dont_split_pct_cutoff].copy()
-    dont_split = overlay[overlay.pct_area < dont_split_pct_cutoff]
+    dont_split = overlay[
+        (overlay.pct_area < dont_split_pct_cutoff) &
+        (overlay.calc_area < dont_split_size_cutoff)]
 
     split = merge_slivers_back_to_shapes(split, dont_split)
 
@@ -85,7 +87,8 @@ for apn, count in apn_counts.iteritems():
 
     ret = split_parcel(subset.head(1).drop("maz_id", axis=1),
                        mazs[mazs.index.isin(subset.maz_id)],
-                       drop_not_in_maz=True, dont_split_pct_cutoff=.03)
+                       drop_not_in_maz=True, dont_split_pct_cutoff=.03,
+                       dont_split_size_cutoff=500)
 
     if ret is None:
         continue
@@ -117,4 +120,4 @@ split_parcels = gpd.GeoDataFrame(
     ])
 )
 
-split_parcels.to_csv("split_parcels.csv", index=False)
+split_parcels.to_csv("cache/split_parcels.csv", index=False)

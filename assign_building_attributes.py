@@ -8,9 +8,9 @@ import time
 # from the parcel tables it writes out both moved_attribute_parcels.csv
 # and moved_attribute_buildings.csv
 
-parcels = gpd.read_geocsv("split_parcels.csv", index_col="apn")
+parcels = gpd.read_geocsv("cache/split_parcels.csv", index_col="apn")
 buildings_linked_to_parcels = gpd.read_geocsv(
-    "buildings_linked_to_parcels.csv", low_memory=False,
+    "cache/buildings_linked_to_parcels.csv", low_memory=False,
     index_col="building_id_tmp")
 
 # this file contains mapping of blocks to mazs to tazs, but we want
@@ -134,5 +134,5 @@ for index, shared_apn_parcels in grps:
 new_parcels = pd.concat(new_parcel_list)
 new_buildings = pd.concat(new_buildings_list)
 
-new_parcels.to_csv("moved_attribute_parcels.csv")
-new_buildings.to_csv("moved_attribute_buildings.csv")
+new_parcels.to_csv("cache/moved_attribute_parcels.csv")
+new_buildings.to_csv("cache/moved_attribute_buildings.csv")

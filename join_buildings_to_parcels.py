@@ -8,10 +8,9 @@ from shared import compute_area, compute_overlap_areas
 # and is written to buildings_linked_to_parcels.csv
 
 print "Reading parcels and buildings", time.ctime()
-buildings = gpd.read_geocsv("buildings.csv", low_memory=False)
-# XXX we should really have the osm_ids for this shouldn't we?
-buildings["building_id_tmp"] = buildings.index
-split_parcels = gpd.read_geocsv("split_parcels.csv")
+buildings = gpd.read_geocsv("cache/buildings.csv", low_memory=False,
+                            index_col="building_id")
+split_parcels = gpd.read_geocsv("cache/split_parcels.csv")
 
 print "Joining buildings to parcels", time.ctime()
 # now we have our new parcels (the split ones and want to join buildings
@@ -22,18 +21,24 @@ cnts = joined_buildings.index.value_counts()
 overlaps = joined_buildings.loc[cnts[cnts > 1].index].copy()
 print len(cnts)
 
+'''
 print "Computing overlapping areas", time.ctime()
 overlaps["overlapping_area"] = compute_overlap_areas(overlaps, split_parcels)
 print "Done computing overlapping areas", time.ctime()
 print overlaps.overlapping_area.describe()
+overlaps[["overlapping_area"]].to_csv("overlapping_area.csv")
+'''
+
+overlaps["overlapping_area"] = pd.read_csv(
+    "overlapping_area.csv", index_col="building_id").overlapping_area.values
 
 # the percent of the total area of the building footprint that overlaps with
 # each parcel
 overlaps["overlapping_pct_area"] = overlaps.overlapping_area /\
-    overlaps.overlapping_area.groupby(overlapping_area.index).transform('sum')
+    overlaps.overlapping_area.groupby(overlaps.index).transform('sum')
 # find the max percent that overlaps with each parcel
-overlaps["max_overlapping_pct_area"] = overlapping_pct_area.groupby(
-    overlapping_pct_area.index).max()
+overlaps["max_overlapping_pct_area"] = overlaps.overlapping_pct_area.groupby(
+    overlaps.index).max()
 
 # A pretty high proportion of building footprints touch at least two parcels -
 # these are the "overlaps"
@@ -88,6 +93,7 @@ def deal_with_problematic_overlap(index, building_overlaps, split_parcels):
     keep = building_overlaps
     building_overlaps = building_overlaps.query(
         "overlapping_pct_area > %f" % sliver_cutoff)
+
     if len(building_overlaps) == 0:
         # no non-slivers, but there mostly look like apartment buildings,
         # townhomes, and such just put all the footprints back in
@@ -110,7 +116,7 @@ problematic_overlaps["calc_area"] = compute_area(problematic_overlaps)
 # drop small footprints (these are like storage sheds, believe it or not)
 large_problematic_overlaps = \
     problematic_overlaps[problematic_overlaps.calc_area > 200]
-print "Dropped %d small footprints" %\
+print "Dropped %d small overlapping footprints" %\
     (len(problematic_overlaps) - len(large_problematic_overlaps))
 
 
@@ -139,12 +145,12 @@ for building_sets in fixes['Split building']:
     out = gpd.overlay(
         # we go back to the original buildings set in order to drop the joined
         # columns
-        buildings.loc[building_sets.index].head(1),
+        buildings.loc[building_sets.index].head(1).reset_index(),
         split_parcels.loc[building_sets.index_right].reset_index(),
         how='intersection')
 
     # we're splitting up building footprints, so append "-1", "-2", "-3" etc.
-    out["building_id_tmp"] = out.building_id_tmp.astype("string").str.\
+    out.index = out.building_id.astype("string").str.\
         cat(['-'+str(x) for x in range(1, len(out) + 1)])
 
     chopped_up_buildings.append(out)
@@ -161,7 +167,6 @@ buildings_linked_to_parcels = gpd.GeoDataFrame(pd.concat([
 ]))
 
 
-buildings_linked_to_parcels["apn"] = buildings_linked_to_parcels.index_right
 # don't keep all the columns
 buildings_linked_to_parcels = \
     buildings_linked_to_parcels[list(buildings.columns) + ["apn"]]
@@ -169,5 +174,6 @@ buildings_linked_to_parcels = \
 # assert everyone has an apn
 assert buildings_linked_to_parcels.apn.notnull().all()
 
+buildings_linked_to_parcels.index.name = "building_id"
 buildings_linked_to_parcels.to_csv(
-    "buildings_linked_to_parcels.csv", index=False)
+    "cache/buildings_linked_to_parcels.csv")
