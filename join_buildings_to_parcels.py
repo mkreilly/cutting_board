@@ -19,19 +19,16 @@ joined_buildings = gpd.sjoin(buildings, split_parcels)
 # identify overlaps of buildings and split parcels
 cnts = joined_buildings.index.value_counts()
 overlaps = joined_buildings.loc[cnts[cnts > 1].index].copy()
-print len(cnts)
 
-'''
 print "Computing overlapping areas", time.ctime()
 overlaps["overlapping_area"] = compute_overlap_areas(overlaps, split_parcels)
 print "Done computing overlapping areas", time.ctime()
 print overlaps.overlapping_area.describe()
 overlaps[["overlapping_area"]].to_csv("overlapping_area.csv")
 '''
-
 overlaps["overlapping_area"] = pd.read_csv(
     "overlapping_area.csv", index_col="building_id").overlapping_area.values
-
+'''
 # the percent of the total area of the building footprint that overlaps with
 # each parcel
 overlaps["overlapping_pct_area"] = overlaps.overlapping_area /\

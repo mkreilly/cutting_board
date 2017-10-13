@@ -22,8 +22,13 @@ joined_parcels = gpd.sjoin(parcels, mazs, how="inner", op='intersects')
 # the main shape - we don't need to keep small slivers of parcels that could be
 # geometric errors
 def merge_slivers_back_to_shapes(shapes, slivers):
-    for label, row in slivers.iterrows():
+    if len(shapes) == 0:
+        # we're all slivers, so just move one of the slivers to the shapes and
+        # they all get merged together
+        shapes = slivers.iloc[:1]
+        slivers = slivers.iloc[1:]
 
+    for label, row in slivers.iterrows():
         distances = [
             row.geometry.distance(row2.geometry)
             for _, row2 in shapes.iterrows()
@@ -41,7 +46,7 @@ def merge_slivers_back_to_shapes(shapes, slivers):
 
 # split a parcel by mazs
 def split_parcel(parcel, split_shapes, dont_split_pct_cutoff=.01,
-                 drop_not_in_maz=False):
+                 dont_split_size_cutoff=150, drop_not_in_maz=False):
     try:
         overlay = gpd.overlay(parcel, split_shapes.reset_index(),
                               how='identity')
@@ -53,10 +58,14 @@ def split_parcel(parcel, split_shapes, dont_split_pct_cutoff=.01,
     overlay = compute_pct_area(overlay, compute_area(parcel).sum())
 
     # now we need to make sure we don't split off very small portions
-    split = overlay[overlay.pct_area >= dont_split_pct_cutoff].copy()
+    split = overlay[
+        (overlay.pct_area >= dont_split_pct_cutoff) &
+        (overlay.calc_area >= dont_split_size_cutoff)
+    ].copy()
     dont_split = overlay[
-        (overlay.pct_area < dont_split_pct_cutoff) &
-        (overlay.calc_area < dont_split_size_cutoff)]
+        (overlay.pct_area < dont_split_pct_cutoff) |
+        (overlay.calc_area < dont_split_size_cutoff)
+    ]
 
     split = merge_slivers_back_to_shapes(split, dont_split)
 
@@ -119,5 +128,8 @@ split_parcels = gpd.GeoDataFrame(
         split_parcels
     ])
 )
+
+if "index_right" in split_parcels.columns:
+   del split_parcels["index_right"]
 
 split_parcels.to_csv("cache/split_parcels.csv", index=False)

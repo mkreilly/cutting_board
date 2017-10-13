@@ -1,5 +1,6 @@
 import pandas as pd
 import geopandas as gpd
+from shared import compute_area
 import time
 
 # this file reads the split_parcels.csv and the
@@ -11,7 +12,7 @@ import time
 parcels = gpd.read_geocsv("cache/split_parcels.csv", index_col="apn")
 buildings_linked_to_parcels = gpd.read_geocsv(
     "cache/buildings_linked_to_parcels.csv", low_memory=False,
-    index_col="building_id_tmp")
+    index_col="building_id")
 
 # this file contains mapping of blocks to mazs to tazs, but we want
 # the maz to taz mapping
@@ -109,7 +110,7 @@ new_parcel_list = []
 
 cnt = 0
 
-grps = filtered_parcels.groupby("orig_apn")
+grps = parcels.groupby("orig_apn")
 total_cnt = len(grps)
 # iterate over parcels (not sub-parcels)
 for index, shared_apn_parcels in grps:
