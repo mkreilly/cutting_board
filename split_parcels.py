@@ -10,6 +10,7 @@ from shared import compute_pct_area, compute_area
 print "Loading parcels and mazs"
 print time.ctime()
 parcels = gpd.read_geocsv("parcels.csv")
+parcels["orig_apn"] = parcels["apn"]
 mazs = gpd.read_geocsv("mazs.csv")[["maz_id", "geometry"]]
 
 # join mazs to parcels
@@ -81,6 +82,7 @@ def split_parcel(parcel, split_shapes, dont_split_pct_cutoff=.01,
 # this does the parcel splits
 cnt = 0
 split_parcels = []
+joined_parcels.set_index("apn", inplace=True)
 apn_counts = joined_parcels.index.value_counts()[lambda x: x > 1]
 bad_apns = ["999 999999999"]
 mazs.set_index("maz_id", inplace=True)
@@ -102,7 +104,6 @@ for apn, count in apn_counts.iteritems():
     if ret is None:
         continue
 
-    ret["orig_apn"] = apn
     # make a new unique apn when we split a parcel
     ret["apn"] = [str(apn) + "-" + str(i+1) for i in range(len(ret))]
     split_parcels.append(ret)
@@ -116,15 +117,13 @@ split_parcels = pd.concat(split_parcels)
 print "Done splitting parcels"
 print time.ctime()
 
-
-joined_parcels["orig_apn"] = joined_parcels.index
 # this is a little hard to read, but the idea is that we want to take all the
 # parcels and their associated maz_ids which were NOT overlaps and merge them
 # with all the splits of the overlapping parcels that we just did
 # after this line we should have all the parcels
 split_parcels = gpd.GeoDataFrame(
     pd.concat([
-        joined_parcels[~joined_parcels.index.isin(split_parcels.orig_apn)],
+        parcels[~parcels.apn.isin(split_parcels.orig_apn)],
         split_parcels
     ])
 )
