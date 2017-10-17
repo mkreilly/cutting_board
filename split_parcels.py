@@ -9,7 +9,9 @@ from shared import compute_pct_area, compute_area
 
 print "Loading parcels and mazs"
 print time.ctime()
-parcels = gpd.read_geocsv("parcels.csv")
+parcels = gpd.read_geocsv("cache/filtered_parcels.csv")
+bad_apns = ["999 999999999"]
+parcels = parcels[~parcels.apn.isin(bad_apns)]
 parcels["orig_apn"] = parcels["apn"]
 mazs = gpd.read_geocsv("mazs.csv")[["maz_id", "geometry"]]
 
@@ -84,16 +86,11 @@ cnt = 0
 split_parcels = []
 joined_parcels.set_index("apn", inplace=True)
 apn_counts = joined_parcels.index.value_counts()[lambda x: x > 1]
-bad_apns = ["999 999999999"]
 mazs.set_index("maz_id", inplace=True)
 
 print "Splitting parcels when there are overlaps"
 print time.ctime()
 for apn, count in apn_counts.iteritems():
-
-    if apn in bad_apns:
-        continue
-
     subset = joined_parcels.loc[apn]
 
     ret = split_parcel(subset.head(1).drop("maz_id", axis=1),
@@ -102,10 +99,12 @@ for apn, count in apn_counts.iteritems():
                        dont_split_size_cutoff=500)
 
     if ret is None:
-        continue
-
-    # make a new unique apn when we split a parcel
-    ret["apn"] = [str(apn) + "-" + str(i+1) for i in range(len(ret))]
+        # there's an error in the split parcel function, so we just
+        # take the first maz intersection
+        ret = subset.head(1)
+    else:
+        # make a new unique apn when we split a parcel
+        ret["apn"] = [str(apn) + "-" + str(i+1) for i in range(len(ret))]
     split_parcels.append(ret)
 
     cnt += 1
@@ -117,13 +116,16 @@ split_parcels = pd.concat(split_parcels)
 print "Done splitting parcels"
 print time.ctime()
 
+joined_parcels.index.name = "apn"
+joined_parcels = joined_parcels.reset_index()
+
 # this is a little hard to read, but the idea is that we want to take all the
 # parcels and their associated maz_ids which were NOT overlaps and merge them
 # with all the splits of the overlapping parcels that we just did
 # after this line we should have all the parcels
 split_parcels = gpd.GeoDataFrame(
     pd.concat([
-        parcels[~parcels.apn.isin(split_parcels.orig_apn)],
+        joined_parcels[~joined_parcels.apn.isin(split_parcels.orig_apn)],
         split_parcels
     ])
 )
