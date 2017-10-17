@@ -64,7 +64,7 @@ def assign_parcel_attributes_to_buildings(buildings, parcels):
 
     # account for height
     built_area = large_buildings.calc_area * \
-        large_buildings.stories.astype('float')
+        large_buildings.stories.astype('float').clip(1)
     # get built area proportion in each building footprint
     proportion_built_area = built_area / built_area.sum()
 
@@ -134,6 +134,7 @@ for index, shared_apn_parcels in grps:
 
 new_parcels = pd.concat(new_parcel_list)
 new_buildings = pd.concat(new_buildings_list)
+new_buildings.index.name = "building_id"
 
 new_parcels.to_csv("cache/moved_attribute_parcels.csv")
 new_buildings.to_csv("cache/moved_attribute_buildings.csv")
