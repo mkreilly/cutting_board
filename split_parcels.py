@@ -98,10 +98,11 @@ for apn, count in apn_counts.iteritems():
                        drop_not_in_maz=True, dont_split_pct_cutoff=.03,
                        dont_split_size_cutoff=500)
 
-    if ret is None:
+    if ret is None or len(ret) == 0:
         # there's an error in the split parcel function, so we just
         # take the first maz intersection
-        ret = subset.head(1)
+        ret = subset.head(1).copy()
+        ret["apn"] = apn
     else:
         # make a new unique apn when we split a parcel
         ret["apn"] = [str(apn) + "-" + str(i+1) for i in range(len(ret))]
@@ -131,6 +132,6 @@ split_parcels = gpd.GeoDataFrame(
 )
 
 if "index_right" in split_parcels.columns:
-   del split_parcels["index_right"]
+    del split_parcels["index_right"]
 
 split_parcels.to_csv("cache/split_parcels.csv", index=False)

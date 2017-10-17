@@ -23,12 +23,13 @@ overlaps = joined_buildings.loc[cnts[cnts > 1].index].copy()
 print "Computing overlapping areas", time.ctime()
 overlaps["overlapping_area"] = compute_overlap_areas(overlaps, split_parcels)
 print "Done computing overlapping areas", time.ctime()
-print overlaps.overlapping_area.describe()
-overlaps[["overlapping_area"]].to_csv("overlapping_area.csv")
+
+# overlaps[["overlapping_area"]].to_csv("overlapping_area.csv")
 '''
 overlaps["overlapping_area"] = pd.read_csv(
     "overlapping_area.csv", index_col="building_id").overlapping_area.values
 '''
+
 # the percent of the total area of the building footprint that overlaps with
 # each parcel
 overlaps["overlapping_pct_area"] = overlaps.overlapping_area /\
@@ -62,7 +63,7 @@ print "Len parcels that overlap enough to map to a single parcel:",\
     len(overlaps_greater_than_threshold)
 
 problematic_overlaps = overlaps.query(
-    "max_overlapping_pct_area < %f" % SINGLE_PARCEL_THRESHOLD)
+    "max_overlapping_pct_area < %f" % SINGLE_PARCEL_THRESHOLD).copy()
 print "Len parcels which overlap significantly with 2 or more parcels:",\
     len(problematic_overlaps.index.value_counts())
 
@@ -147,7 +148,7 @@ for building_sets in fixes['Split building']:
         how='intersection')
 
     # we're splitting up building footprints, so append "-1", "-2", "-3" etc.
-    out.index = out.building_id.astype("string").str.\
+    out.index = out.index_left.astype("string").str.\
         cat(['-'+str(x) for x in range(1, len(out) + 1)])
 
     chopped_up_buildings.append(out)
@@ -168,8 +169,9 @@ buildings_linked_to_parcels = gpd.GeoDataFrame(pd.concat([
 buildings_linked_to_parcels = \
     buildings_linked_to_parcels[list(buildings.columns) + ["apn"]]
 
-# assert everyone has an apn
-assert buildings_linked_to_parcels.apn.notnull().all()
+# only keep footprints that have been joined to a parcel
+buildings_linked_to_parcels = buildings_linked_to_parcels[
+    buildings_linked_to_parcels.apn.notnull()]
 
 buildings_linked_to_parcels.index.name = "building_id"
 buildings_linked_to_parcels.to_csv(
