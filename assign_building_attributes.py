@@ -58,13 +58,13 @@ def assign_parcel_attributes_to_buildings(buildings, parcels):
     large_buildings["small_building"] = False
 
     large_buildings["stories"] = large_buildings.stories.fillna(
-        parcel.stories).fillna(1)
+        parcel.stories).fillna(1).clip(1)
     large_buildings["year_built"] = parcel.year_built
     large_buildings["building_type"] = parcel.dev_type
 
     # account for height
     built_area = large_buildings.calc_area * \
-        large_buildings.stories.astype('float').clip(1)
+        large_buildings.stories.astype('float')
     # get built area proportion in each building footprint
     proportion_built_area = built_area / built_area.sum()
 
