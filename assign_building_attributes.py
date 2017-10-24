@@ -3,6 +3,8 @@ import geopandas as gpd
 from shared import compute_area
 import time
 
+building_id_start_val = 1
+
 # this file reads the split_parcels.csv and the
 # buildings_linked_to_parcels.csv and splits up the attribuets
 # from parcels to buildings.  Since it also removes attributes
@@ -80,6 +82,8 @@ def assign_parcel_attributes_to_buildings(buildings, parcels):
 
 
 def make_dummy_building(parcels):
+    global building_id_start_val
+
     # when there's more than one parcel, we put the dummy building on the
     # biggest sub parcel
     parcel = parcels.sort_values(by="calc_area", ascending=False).head(1)
@@ -100,7 +104,8 @@ def make_dummy_building(parcels):
         'apn': [parcel.index[0]],
         'building:levels': [1],
         'building': ['yes']
-    })
+    }, index=[building_id_start_val])
+    building_id_start_val += 1
     building.crs = {'init': 'epsg:3857'}
     building = building.to_crs(epsg=4326)
     return assign_parcel_attributes_to_buildings(building, parcels)
@@ -135,6 +140,9 @@ for index, shared_apn_parcels in grps:
 new_parcels = pd.concat(new_parcel_list)
 new_buildings = pd.concat(new_buildings_list)
 new_buildings.index.name = "building_id"
+
+# make sure we didn't end up with any duplicate building ids
+assert new_buildings.index.value_counts().values[0] == 1
 
 new_parcels.to_csv("cache/moved_attribute_parcels.csv")
 new_buildings.to_csv("cache/moved_attribute_buildings.csv")
