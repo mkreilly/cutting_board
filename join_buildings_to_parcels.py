@@ -148,7 +148,7 @@ for building_sets in fixes['Split building']:
         how='intersection')
 
     # we're splitting up building footprints, so append "-1", "-2", "-3" etc.
-    out.index = out.index_left.astype("string").str.\
+    out.index = out.building_id.astype("string").str.\
         cat(['-'+str(x) for x in range(1, len(out) + 1)])
 
     chopped_up_buildings.append(out)
