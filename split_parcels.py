@@ -96,9 +96,9 @@ for apn, count in apn_counts.iteritems():
     ret = split_parcel(subset.head(1).drop("maz_id", axis=1),
                        mazs[mazs.index.isin(subset.maz_id)],
                        drop_not_in_maz=True, dont_split_pct_cutoff=.03,
-                       dont_split_size_cutoff=500)
+                       dont_split_size_cutoff=1250)
 
-    if ret is None or len(ret) == 0:
+    if ret is None or len(ret) <= 1:
         # there's an error in the split parcel function, so we just
         # take the first maz intersection
         ret = subset.head(1).copy()
