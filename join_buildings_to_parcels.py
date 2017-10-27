@@ -10,11 +10,13 @@ from shared import compute_area, compute_overlap_areas
 print "Reading parcels and buildings", time.ctime()
 buildings = gpd.read_geocsv("cache/buildings.csv", low_memory=False,
                             index_col="building_id")
-split_parcels = gpd.read_geocsv("cache/split_parcels.csv")
+split_parcels = gpd.read_geocsv("cache/split_parcels.csv",
+                                index_col="apn")
 
 print "Joining buildings to parcels", time.ctime()
 # now we have our new parcels (the split ones and want to join buildings
 joined_buildings = gpd.sjoin(buildings, split_parcels)
+joined_buildings["apn"] = joined_buildings["index_right"]
 
 # identify overlaps of buildings and split parcels
 cnts = joined_buildings.index.value_counts()
@@ -80,6 +82,33 @@ def are_these_same_parcels(parcel_overlaps):
         majority_zero_values(parcel_overlaps.res_units)
 
 
+def find_master_parcel(parcel_overlaps):
+    # similar to the above, but returns the parcel to keep - keep the largest
+    # building sqft, or units, or nres_sqft value
+    keep_apn = parcel_overlaps.sort_values(
+        by=["bldg_sqft", "res_units", "nres_sqft"], ascending=False)\
+        .apn.values[0]
+    dropped_apns = set(parcel_overlaps.apn)
+    dropped_apns.remove(keep_apn)
+    return keep_apn, list(dropped_apns)
+
+
+def union_parcels(split_parcels, keep_apn, dropped_apns):
+    # given the parcel set, union the geometry among the keep_apn (single apn)
+    # and dropped_apns (list of apns) and then drop the parcels in dropped_apns
+    all_apns = [keep_apn] + dropped_apns
+    new_geometry = split_parcels.loc[all_apns].geometry.unary_union
+
+    # ok this is stupid but there's something really weird where you can't set
+    # the geometry value with a multigeometry
+    geometry = split_parcels.geometry.copy()
+    index = split_parcels.index.get_loc(keep_apn)
+    geometry[index] = new_geometry
+    split_parcels["geometry"] = geometry
+
+    return split_parcels.drop(dropped_apns)
+
+
 def deal_with_problematic_overlap(index, building_overlaps, split_parcels):
     area = compute_area(building_overlaps.head(1)).values[0]
     # sliver threshold varies by size of the building, for small parcels we
@@ -97,7 +126,7 @@ def deal_with_problematic_overlap(index, building_overlaps, split_parcels):
         # townhomes, and such just put all the footprints back in
         building_overlaps = keep
 
-    parcel_overlaps = split_parcels.loc[building_overlaps.index_right]
+    parcel_overlaps = split_parcels.loc[building_overlaps.apn]
 
     if len(building_overlaps) == 1:
         title = "Single parcel"
@@ -140,15 +169,20 @@ for building_sets in fixes['Split building']:
     cnt += 1
     if cnt % 25 == 0:
         print "Finished %d of %d" % (cnt, total_cnt)
+
     out = gpd.overlay(
         # we go back to the original buildings set in order to drop the joined
         # columns
         buildings.loc[building_sets.index].head(1).reset_index(),
-        split_parcels.loc[building_sets.index_right].reset_index(),
+        split_parcels.loc[building_sets.apn].reset_index(),
         how='intersection')
 
+    # this is super weird but I'm seeing the need for different code on
+    # different os-es presumably because of different version of pandas
+    # or geopandas
+    out_index = out.building_id if "building_id" in out.columns else out.index
     # we're splitting up building footprints, so append "-1", "-2", "-3" etc.
-    out.index = out.building_id.astype("string").str.\
+    out.index = out_index.astype("string").str.\
         cat(['-'+str(x) for x in range(1, len(out) + 1)])
 
     chopped_up_buildings.append(out)
@@ -156,12 +190,49 @@ for building_sets in fixes['Split building']:
 chopped_up_buildings = pd.concat(chopped_up_buildings)
 
 
+print "Union parcels where appropriate"
+unioned_buildings = []
+mapped_apns = {}  # need to keep track of parcels we dropped
+cnt = 0
+total_cnt = len(fixes['Union parcels'])
+for building_sets in fixes['Union parcels']:
+    cnt += 1
+    if cnt % 25 == 0:
+        print "Finished %d of %d" % (cnt, total_cnt)
+
+    if 23014330 in building_sets.index:
+        print building_sets
+
+    keep_apn, dropped_apns = find_master_parcel(building_sets)
+
+    # this code does an iterative union, if parcels are joined to
+    # parcels that have already been joined
+    keep_apn = mapped_apns.get(keep_apn, keep_apn)
+    dropped_apns = list(set([
+        mapped_apns.get(apn, apn) for apn in dropped_apns]))
+
+    for dropped_apn in dropped_apns:
+        mapped_apns[dropped_apn] = keep_apn
+
+    split_parcels = union_parcels(split_parcels, keep_apn, dropped_apns)
+
+    # assign the building to the one master parcel
+    keep_building = building_sets[lambda row: row.apn == keep_apn]
+    if 23014330 in building_sets.index:
+        print keep_apn, dropped_apns
+        print keep_building
+
+    unioned_buildings.append(keep_building)
+
+unioned_buildings = pd.concat(unioned_buildings)
+
+
 buildings_linked_to_parcels = gpd.GeoDataFrame(pd.concat([
     non_overlaps,
     overlaps_greater_than_threshold,
     chopped_up_buildings,
-    pd.concat(fixes['Single parcel'])
-    # leaving out union parcels for now because they're more complicated
+    pd.concat(fixes['Single parcel']),
+    unioned_buildings
 ]))
 
 
@@ -176,3 +247,6 @@ buildings_linked_to_parcels = buildings_linked_to_parcels[
 buildings_linked_to_parcels.index.name = "building_id"
 buildings_linked_to_parcels.to_csv(
     "cache/buildings_linked_to_parcels.csv")
+
+split_parcels.index.name = "apn"
+split_parcels.to_csv("cache/split_parcels_unioned.csv")

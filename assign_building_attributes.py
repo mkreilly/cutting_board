@@ -11,7 +11,7 @@ building_id_start_val = 1
 # from the parcel tables it writes out both moved_attribute_parcels.csv
 # and moved_attribute_buildings.csv
 
-parcels = gpd.read_geocsv("cache/split_parcels.csv", index_col="apn")
+parcels = gpd.read_geocsv("cache/split_parcels_unioned.csv", index_col="apn")
 buildings_linked_to_parcels = gpd.read_geocsv(
     "cache/buildings_linked_to_parcels.csv", low_memory=False,
     index_col="building_id")
