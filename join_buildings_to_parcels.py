@@ -97,6 +97,7 @@ def union_parcels(split_parcels, keep_apn, dropped_apns):
     # given the parcel set, union the geometry among the keep_apn (single apn)
     # and dropped_apns (list of apns) and then drop the parcels in dropped_apns
     all_apns = [keep_apn] + dropped_apns
+    assert keep_apn not in dropped_apns
     new_geometry = split_parcels.loc[all_apns].geometry.unary_union
 
     # ok this is stupid but there's something really weird where you can't set
@@ -192,7 +193,19 @@ chopped_up_buildings = pd.concat(chopped_up_buildings)
 
 print "Union parcels where appropriate"
 unioned_buildings = []
+
 mapped_apns = {}  # need to keep track of parcels we dropped
+
+
+def get_mapped_apn(apn):
+    # needs to be recursive
+    if apn in mapped_apns:
+        mapped_apn = mapped_apns[apn]
+        if apn == mapped_apn:
+            return apn
+        return get_mapped_apn(mapped_apn)
+    return apn
+
 cnt = 0
 total_cnt = len(fixes['Union parcels'])
 for building_sets in fixes['Union parcels']:
@@ -200,16 +213,14 @@ for building_sets in fixes['Union parcels']:
     if cnt % 25 == 0:
         print "Finished %d of %d" % (cnt, total_cnt)
 
-    if 23014330 in building_sets.index:
-        print building_sets
-
     keep_apn, dropped_apns = find_master_parcel(building_sets)
 
     # this code does an iterative union, if parcels are joined to
     # parcels that have already been joined
-    keep_apn = mapped_apns.get(keep_apn, keep_apn)
-    dropped_apns = list(set([
-        mapped_apns.get(apn, apn) for apn in dropped_apns]))
+    keep_apn = get_mapped_apn(keep_apn)
+    dropped_apns = set([get_mapped_apn(apn) for apn in dropped_apns])
+    dropped_apns.discard(keep_apn)
+    dropped_apns = list(dropped_apns)
 
     for dropped_apn in dropped_apns:
         mapped_apns[dropped_apn] = keep_apn
@@ -218,9 +229,6 @@ for building_sets in fixes['Union parcels']:
 
     # assign the building to the one master parcel
     keep_building = building_sets[lambda row: row.apn == keep_apn]
-    if 23014330 in building_sets.index:
-        print keep_apn, dropped_apns
-        print keep_building
 
     unioned_buildings.append(keep_building)
 
