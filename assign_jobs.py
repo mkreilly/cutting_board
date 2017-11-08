@@ -3,6 +3,7 @@ import pandas as pd
 import shared
 import osmnx
 
+print "Reading data"
 buildings = gpd.read_geocsv(
     "cache/buildings_match_controls.csv", index_col="building_id")
 parcels = gpd.read_geocsv("cache/moved_attribute_parcels.csv", index_col="apn")
@@ -12,7 +13,7 @@ mazs = gpd.read_geocsv("mazs.csv", index_col="maz_id")
 berkeley = osmnx.gdf_from_place("Berkeley, California")
 berkeley_mazs = gpd.sjoin(mazs, berkeley).drop("index_right", axis=1)
 
-
+print "Intersecting with buildings"
 # goal here is to create a dictionary where keys are establishments ids and
 # values are possible building_ids - this lets us write a function to assign
 # jobs to buildings.  when we have a match to a parcel, we list the buildings
@@ -26,6 +27,7 @@ establishments_possible_buildings = {
 }
 
 
+print "Intersecting with parcels"
 # intersect establishments and parcels, and drop intersections from buildings
 parcels["num_buildings"] = \
     buildings.apn.value_counts().reindex(parcels.index).fillna(0)
@@ -43,6 +45,8 @@ establishments_possible_buildings.update({
     in establishments_intersect_parcels.index_right.iteritems()
 })
 
+
+print "Intersecting with mazs"
 # intersect establishments from mazs, and drop intersections from buildings
 # and parcels
 berkeley_mazs["num_buildings"] = buildings.maz_id.value_counts().\
@@ -79,6 +83,8 @@ def assign_establishments_to_buildings(establishments_possible_buildings):
         for eid, buildings in establishments_possible_buildings.iteritems()
     })
 
+
+print "Picking buildings from among options"
 establishments["building_id"] = \
     assign_establishments_to_buildings(establishments_possible_buildings)
 berkeley_establishments = establishments[establishments.building_id.notnull()]
@@ -88,6 +94,8 @@ outdf = berkeley_establishments.loc[
         berkeley_establishments.local_employment)
 ][["PBA_category", "building_id"]]
 
+
+print "Writing data"
 outdf.index.name = "establishment_id"
 outdf.reset_index(inplace=True)
 outdf.index.name = "job_id"
