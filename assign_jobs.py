@@ -7,7 +7,8 @@ print "Reading data"
 buildings = gpd.read_geocsv(
     "cache/buildings_match_controls.csv", index_col="building_id")
 parcels = gpd.read_geocsv("cache/moved_attribute_parcels.csv", index_col="apn")
-establishments = gpd.read_geocsv("establishments.csv", index_col="duns_number")
+establishments = gpd.read_geocsv(
+    "cache/establishments.csv", index_col="duns_number")
 mazs = gpd.read_geocsv("mazs.csv", index_col="maz_id")
 
 berkeley = osmnx.gdf_from_place("Berkeley, California")
@@ -100,4 +101,4 @@ outdf.index.name = "establishment_id"
 outdf.reset_index(inplace=True)
 outdf.index.name = "job_id"
 outdf.index = outdf.index + 1  # starts at zero
-outdf.to_csv("jobs.csv")
+outdf.to_csv("cache/jobs.csv")
