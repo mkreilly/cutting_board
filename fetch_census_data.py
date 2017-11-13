@@ -16,7 +16,7 @@ for county in ['001', '013', '041', '055', '075', '081', '085', '095', '097']:
 
     df = pd.DataFrame().from_dict(
         c.sf1.get(
-            ['H00010001', 'H0030003', 'H0040004'],
+            ['P0180001', 'H00010001', 'H0030003', 'H0040004'],
             geo={
                 'for': 'block:*',
                 'in': 'state:06 county:%s' % county
@@ -27,6 +27,7 @@ for county in ['001', '013', '041', '055', '075', '081', '085', '095', '097']:
     df["fips"] = df.state + df.county + df.tract + df.block
 
     df.rename(columns={
+        'P0180001': 'total_households',
         'H00010001': 'residential_units',
         'H0030003': 'vacant_units',
         'H0040004': 'rental_units'
