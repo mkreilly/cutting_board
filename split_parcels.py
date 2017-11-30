@@ -3,13 +3,17 @@ import geopandas as gpd
 import numpy as np
 import time
 from shared import compute_pct_area, compute_area
+import sys
 
 # This script joins parcels mazs and splits them along maz boundaries
 # it reads parcels.csv and mazs.csv and writes split_parcels.csv
 
+args = sys.argv[1:]
+prefix = args[0] + "_" if len(args) else ""
+
 print "Loading parcels and mazs"
 print time.ctime()
-parcels = gpd.read_geocsv("cache/filtered_parcels.csv")
+parcels = gpd.read_geocsv("cache/%sparcels.csv" % prefix)
 bad_apns = ["999 999999999"]
 parcels = parcels[~parcels.apn.isin(bad_apns)]
 parcels["orig_apn"] = parcels["apn"]
@@ -42,7 +46,7 @@ def merge_slivers_back_to_shapes(shapes, slivers):
         closest_index = shapes.index[min_ind]
 
         union = closest_shape.geometry.union(row.geometry)
-        shapes = shapes.set_value(closest_index, "geometry", union)
+        shapes.at[closest_index, "geometry"] = union
 
     return shapes
 
@@ -68,7 +72,7 @@ def split_parcel(parcel, split_shapes, dont_split_pct_cutoff=.01,
     dont_split = overlay[
         (overlay.pct_area < dont_split_pct_cutoff) |
         (overlay.calc_area < dont_split_size_cutoff)
-    ]
+    ].copy()
 
     split = merge_slivers_back_to_shapes(split, dont_split)
 
@@ -112,13 +116,20 @@ for apn, count in apn_counts.iteritems():
     if cnt % 100 == 0:
         print "Done %d of %d" % (cnt, len(apn_counts))
 
-split_parcels = pd.concat(split_parcels)
+if "index_right" in joined_parcels.columns:
+    del joined_parcels["index_right"]
+joined_parcels.index.name = "apn"
+joined_parcels = joined_parcels.reset_index()
 
 print "Done splitting parcels"
 print time.ctime()
 
-joined_parcels.index.name = "apn"
-joined_parcels = joined_parcels.reset_index()
+if len(split_parcels) == 0:
+    # for small cities there are no parcels to split
+    joined_parcels.to_csv("cache/%ssplit_parcels.csv" % prefix, index=False)
+    sys.exit(0)
+
+split_parcels = pd.concat(split_parcels)
 
 # this is a little hard to read, but the idea is that we want to take all the
 # parcels and their associated maz_ids which were NOT overlaps and merge them
@@ -133,5 +144,4 @@ split_parcels = gpd.GeoDataFrame(
 
 if "index_right" in split_parcels.columns:
     del split_parcels["index_right"]
-
-split_parcels.to_csv("cache/split_parcels.csv", index=False)
+split_parcels.to_csv("cache/%ssplit_parcels.csv" % prefix, index=False)

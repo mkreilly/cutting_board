@@ -2,12 +2,19 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 import shared
+import sys
+
+args = sys.argv[1:]
+prefix = args[0] + "_" if len(args) else ""
 
 buildings = gpd.read_geocsv(
-    "cache/moved_attribute_buildings.csv", index_col="building_id")
-parcels = gpd.read_geocsv("cache/moved_attribute_parcels.csv", index_col="apn")
+    "cache/%smoved_attribute_buildings.csv" % prefix, index_col="building_id")
+parcels = gpd.read_geocsv("cache/%smoved_attribute_parcels.csv" % prefix,
+                          index_col="apn")
 controls = pd.read_csv("cache/maz_unit_controls.csv", index_col="maz_id")
 mazs = gpd.read_geocsv("mazs.csv", index_col="maz_id")
+buildings["apn"] = buildings.apn.astype("str")
+buildings["building_type"] = buildings.building_type.astype("str")
 buildings["maz_id"] = parcels.maz_id.loc[buildings.apn].values
 
 existing_units = buildings.groupby("maz_id").residential_units.sum()
@@ -27,7 +34,7 @@ def random_select_respect_size(s, num):
 
 
 def random_select_with_weights(s, num):
-    weights = None if s.sum() == 0 else s.values
+    weights = None if s.fillna(0).sum() == 0 else s.values
     return s.sample(num, replace=True, weights=weights).index.value_counts()
 
 
@@ -95,7 +102,7 @@ def synthesize_unit_total(maz_id, buildings, total_units):
         return pd.DataFrame()
 
     buildings = buildings.copy()
-    current_units = buildings.residential_units.sum()
+    current_units = buildings.residential_units.fillna(0).sum()
     required_units = int(total_units - current_units)
 
     if required_units < 0:
@@ -113,7 +120,7 @@ def synthesize_unit_total(maz_id, buildings, total_units):
         # unit count
         buildings = increase_units_to_match_buildling_sqft(buildings)
 
-        current_units = buildings.residential_units.sum()
+        current_units = buildings.residential_units.fillna(0).sum()
         required_units = int(total_units - current_units)
 
         # if we have more units now, randomly select units to subtract
@@ -123,7 +130,7 @@ def synthesize_unit_total(maz_id, buildings, total_units):
             buildings = add_random_units(buildings, required_units)
 
     # this is our promise - make sure we keep it
-    assert buildings.residential_units.sum() == total_units
+    assert buildings.residential_units.fillna(0).sum() == total_units
 
     return buildings
 
@@ -133,4 +140,4 @@ new_buildings = pd.concat([
                           row.residential_units)
     for maz_id, row in controls.iterrows()
 ])
-new_buildings.to_csv("cache/buildings_match_controls.csv")
+new_buildings.to_csv("cache/%sbuildings_match_controls.csv" % prefix)

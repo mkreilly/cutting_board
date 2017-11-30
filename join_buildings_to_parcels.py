@@ -1,22 +1,27 @@
 import pandas as pd
 import geopandas as gpd
 import time
+import sys
 from shared import compute_area, compute_overlap_areas
 
 # This script reads in the split_parcels.csv and the buildings.csv
 # and joins buildings to parcels.  Each building is assigned an apn
 # and is written to buildings_linked_to_parcels.csv
 
+args = sys.argv[1:]
+prefix = args[0] + "_" if len(args) else ""
+
 print "Reading parcels and buildings", time.ctime()
-buildings = gpd.read_geocsv("cache/buildings.csv", low_memory=False,
+buildings = gpd.read_geocsv("cache/%sbuildings.csv" % prefix, low_memory=False,
                             index_col="building_id")
-split_parcels = gpd.read_geocsv("cache/split_parcels.csv",
+split_parcels = gpd.read_geocsv("cache/%ssplit_parcels.csv" % prefix,
                                 index_col="apn")
 
 print "Joining buildings to parcels", time.ctime()
 # now we have our new parcels (the split ones and want to join buildings
-joined_buildings = gpd.sjoin(buildings, split_parcels)
-joined_buildings["apn"] = joined_buildings["index_right"]
+joined_buildings = gpd.sjoin(buildings, split_parcels.reset_index())
+joined_buildings.index.name = "building_id"
+joined_buildings["index_right"] = joined_buildings.apn
 
 # identify overlaps of buildings and split parcels
 cnts = joined_buildings.index.value_counts()
@@ -165,8 +170,8 @@ for index in large_problematic_overlaps.index.unique():
 print "Splitting building footprints where appropriate"
 chopped_up_buildings = []
 cnt = 0
-total_cnt = len(fixes['Split building'])
-for building_sets in fixes['Split building']:
+total_cnt = len(fixes.get('Split building', []))
+for building_sets in fixes.get('Split building', []):
     cnt += 1
     if cnt % 25 == 0:
         print "Finished %d of %d" % (cnt, total_cnt)
@@ -181,14 +186,17 @@ for building_sets in fixes['Split building']:
     # this is super weird but I'm seeing the need for different code on
     # different os-es presumably because of different version of pandas
     # or geopandas
-    out_index = out.building_id if "building_id" in out.columns else out.index
+    out_index = out.building_id if "building_id" in out.columns\
+        else out.index_left
     # we're splitting up building footprints, so append "-1", "-2", "-3" etc.
     out.index = out_index.astype("string").str.\
         cat(['-'+str(x) for x in range(1, len(out) + 1)])
 
     chopped_up_buildings.append(out)
 
-chopped_up_buildings = pd.concat(chopped_up_buildings)
+chopped_up_buildings = pd.concat(chopped_up_buildings)\
+    if len(chopped_up_buildings)\
+    else pd.DataFrame()
 
 
 print "Union parcels where appropriate"
@@ -207,8 +215,8 @@ def get_mapped_apn(apn):
     return apn
 
 cnt = 0
-total_cnt = len(fixes['Union parcels'])
-for building_sets in fixes['Union parcels']:
+total_cnt = len(fixes.get('Union parcels', []))
+for building_sets in fixes.get('Union parcels', []):
     cnt += 1
     if cnt % 25 == 0:
         print "Finished %d of %d" % (cnt, total_cnt)
@@ -232,14 +240,16 @@ for building_sets in fixes['Union parcels']:
 
     unioned_buildings.append(keep_building)
 
-unioned_buildings = pd.concat(unioned_buildings)
+unioned_buildings = pd.concat(unioned_buildings)\
+    if len(unioned_buildings)\
+    else pd.DataFrame()
 
 
 buildings_linked_to_parcels = gpd.GeoDataFrame(pd.concat([
     non_overlaps,
     overlaps_greater_than_threshold,
     chopped_up_buildings,
-    pd.concat(fixes['Single parcel']),
+    pd.concat(fixes.get('Single parcel', [pd.DataFrame()])),
     unioned_buildings
 ]))
 
@@ -252,9 +262,12 @@ buildings_linked_to_parcels = \
 buildings_linked_to_parcels = buildings_linked_to_parcels[
     buildings_linked_to_parcels.apn.notnull()]
 
+if len(buildings_linked_to_parcels):
+    assert buildings_linked_to_parcels.index.value_counts().values[0] == 1
+
 buildings_linked_to_parcels.index.name = "building_id"
 buildings_linked_to_parcels.to_csv(
-    "cache/buildings_linked_to_parcels.csv")
+    "cache/%sbuildings_linked_to_parcels.csv" % prefix)
 
 split_parcels.index.name = "apn"
-split_parcels.to_csv("cache/split_parcels_unioned.csv")
+split_parcels.to_csv("cache/%ssplit_parcels_unioned.csv" % prefix)

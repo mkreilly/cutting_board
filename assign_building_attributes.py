@@ -1,7 +1,11 @@
 import pandas as pd
 import geopandas as gpd
 from shared import compute_area
+import sys
 import time
+
+args = sys.argv[1:]
+prefix = args[0] + "_" if len(args) else ""
 
 building_id_start_val = 1
 
@@ -11,9 +15,10 @@ building_id_start_val = 1
 # from the parcel tables it writes out both moved_attribute_parcels.csv
 # and moved_attribute_buildings.csv
 
-parcels = gpd.read_geocsv("cache/split_parcels_unioned.csv", index_col="apn")
+parcels = gpd.read_geocsv("cache/%ssplit_parcels_unioned.csv" % prefix,
+                          index_col="apn")
 buildings_linked_to_parcels = gpd.read_geocsv(
-    "cache/buildings_linked_to_parcels.csv", low_memory=False,
+    "cache/%sbuildings_linked_to_parcels.csv" % prefix, low_memory=False,
     index_col="building_id")
 
 # this file contains mapping of blocks to mazs to tazs, but we want
@@ -96,7 +101,7 @@ def make_dummy_building(parcels):
 
     parcel.crs = {'init': 'epsg:4326'}
     parcel = parcel.to_crs(epsg=3857)  # switch to meters
-    circle = parcel.centroid.buffer(15).values[0]  # buffer a circle in meters
+    circle = parcel.centroid.buffer(5).values[0]  # buffer a circle in meters
     parcel = parcel.to_crs(epsg=4326)  # back to lat-lng
     building = gpd.GeoDataFrame({
         'name': ['Generated from parcel centroid'],
@@ -144,5 +149,5 @@ new_buildings.index.name = "building_id"
 # make sure we didn't end up with any duplicate building ids
 assert new_buildings.index.value_counts().values[0] == 1
 
-new_parcels.to_csv("cache/moved_attribute_parcels.csv")
-new_buildings.to_csv("cache/moved_attribute_buildings.csv")
+new_parcels.to_csv("cache/%smoved_attribute_parcels.csv" % prefix)
+new_buildings.to_csv("cache/%smoved_attribute_buildings.csv" % prefix)
