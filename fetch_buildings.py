@@ -17,10 +17,14 @@ print "Fetching buildings from OSM", time.ctime()
 jurises = gpd.GeoDataFrame.from_file("juris.geojson")
 
 print "Fetching for:", juris
-# I was a little worried the OSM definitions of the cities aren't the
-# same as ours
-# place = osmnx.gdf_from_places([args[0]])
-place = jurises[jurises.NAME10 == fetch_juris]
+if "Unincorporated" in juris:
+    place = osmnx.gdf_from_places([
+        juris.replace("Unincorporated ", "") +
+        " County, California, United States"])
+else:
+    # I was a little worried the OSM definitions of the cities aren't the
+    # same as ours so we use our shapes for the jurises
+    place = jurises[jurises.NAME10 == fetch_juris]
 
 buildings = osmnx.buildings.create_buildings_gdf(place.iloc[0].geometry)
 print "Done fetching buildings", time.ctime()

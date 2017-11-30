@@ -14,7 +14,9 @@ cities_in_this_county = [
     c.replace("_", " ").title()
     for c in cities_and_counties[lower_county]]
 
-url = "%s_parcels_csv.zip" % lower_county
+# would be nice to fetch these over the web, but can't seem to
+# get a url for a lfs file
+url = "%s_parcels.zip" % lower_county
 parcels = gpd.read_geocsv(url, low_memory=False)
 juris = gpd.GeoDataFrame.from_file("juris.geojson")
 

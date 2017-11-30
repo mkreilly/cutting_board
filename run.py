@@ -5,11 +5,9 @@ import sys
 args = sys.argv[1:]
 
 # TODO
-# fix unincorporated county problem
 # fix san jose
-# remove unnamed index from zipped csv files
 # download git lfs by url
-# https://github.com/git-lfs/git-lfs/issues/2133
+# combine files deal with duplicate ids
 
 
 def initialize_census_for_region():
@@ -36,7 +34,8 @@ counties = ["Solano", "Sonoma", "San Francisco", "San Mateo",
             "Alameda"]
 
 # initialize_census_for_region()
-# pool.map(initialize_county, counties)
+pool.map(initialize_county, counties)
+sys.exit()
 
 jurises = []
 for county in counties:
@@ -52,9 +51,7 @@ jurises = [
     not os.path.exists("cache/%s_buildings_match_controls.csv" % f)]
 
 jurises = [f for f in jurises if f != "San Jose"]
-# jurises = [f for f in jurises if "Unincorporated" not in f]
-
-print jurises
+jurises = [f for f in jurises if f != "Unincorporated San Francisco"]
 
 if len(args):
     # pass jurises to run as comman line arguments
