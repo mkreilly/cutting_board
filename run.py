@@ -6,7 +6,6 @@ args = sys.argv[1:]
 
 # TODO
 # fix san jose
-# download git lfs by url
 # combine files deal with duplicate ids
 
 
