@@ -5,7 +5,7 @@ import sys
 args = sys.argv[1:]
 
 # TODO
-# fix san jose
+# combine attributes when collapsing self-intersections
 # combine files deal with duplicate ids
 
 
@@ -22,6 +22,7 @@ def initialize_county(county):
 def run_jurises(juris):
     print "Processing data for {}".format(juris)
     os.system('python fetch_buildings.py "%s"' % juris)
+    os.system('python self_intersections.py "%s"' % juris)
     os.system('python split_parcels.py "%s"' % juris)
     os.system('python join_buildings_to_parcels.py "%s"' % juris)
     os.system('python assign_building_attributes.py "%s"' % juris)
@@ -33,8 +34,7 @@ counties = ["Solano", "Sonoma", "San Francisco", "San Mateo",
             "Alameda"]
 
 # initialize_census_for_region()
-pool.map(initialize_county, counties)
-sys.exit()
+# pool.map(initialize_county, counties)
 
 jurises = []
 for county in counties:
@@ -49,7 +49,7 @@ jurises = [
     f for f in jurises if
     not os.path.exists("cache/%s_buildings_match_controls.csv" % f)]
 
-jurises = [f for f in jurises if f != "San Jose"]
+# jurises = [f for f in jurises if f != "San Jose"]
 jurises = [f for f in jurises if f != "Unincorporated San Francisco"]
 
 if len(args):

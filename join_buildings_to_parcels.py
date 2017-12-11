@@ -15,11 +15,51 @@ print "Reading parcels and buildings", time.ctime()
 buildings = gpd.read_geocsv("cache/%sbuildings.csv" % prefix, low_memory=False,
                             index_col="building_id")
 split_parcels = gpd.read_geocsv("cache/%ssplit_parcels.csv" % prefix,
-                                index_col="apn")
+                                index_col="apn", low_memory=False)
+mazs = gpd.read_geocsv("mazs.csv")[["maz_id", "geometry"]]
+
+
+def assign_maz_id_by_centroid(df, mazs):
+    df_centroid = df.copy()
+    df_centroid["geometry"] = df.centroid
+
+    df_linked_to_mazs = gpd.sjoin(df_centroid, mazs)
+
+    df["maz_id"] = df_linked_to_mazs["maz_id"]
+    return df
+
+buildings = assign_maz_id_by_centroid(buildings, mazs)
+
+
+# see comment below - groups by an attribute and THEN does a spatial join
+# for performance reasons
+def groupby_spatial_join(groupby_attr, left, right):
+    attr_filter = lambda x: x[groupby_attr] == groupby_val
+    intersections = [
+        gpd.sjoin(left[attr_filter], right[attr_filter])
+        for groupby_val in right[groupby_attr].unique()
+    ]
+    return pd.concat(intersections)
+
+
+# I've had a heck of a time getting San Jose parcels and buildings to finish
+# joining - although I can run the entirety of alameda county with more parcels
+# and more buildings, San Jose seems to never complete, even after dropping all
+# the self intersection parcels that San Jose typically has.  My current
+# workaround is this - to groupby maz_id and do joins for each maz one at a
+# time - since parcels are already split on maz boundaries, and since we want
+# every building assigned to one and only one, this seems like a fine approach
+# but I'm still suspicious of geopandas for why it can't seem to do the whole
+# join
+def special_sjoin(left, right):
+    if args[0] != "San Jose":
+        return gpd.sjoin(left, right)
+
+    return groupby_spatial_join("maz_id", left, right)
 
 print "Joining buildings to parcels", time.ctime()
 # now we have our new parcels (the split ones and want to join buildings
-joined_buildings = gpd.sjoin(buildings, split_parcels.reset_index())
+joined_buildings = special_sjoin(buildings, split_parcels.reset_index())
 joined_buildings.index.name = "building_id"
 joined_buildings["index_right"] = joined_buildings.apn
 

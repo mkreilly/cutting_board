@@ -4,9 +4,9 @@ import shared
 import sys
 
 args = sys.argv[1:]
-juris = args[0]
+prefix = args[0] + "_" if len(args) else ""
 
-parcels = gpd.read_geocsv("%s_parcels.csv" % juris, low_memory=False)
+parcels = gpd.read_geocsv("cache/%sparcels.csv" % prefix, low_memory=False)
 mazs = gpd.read_geocsv("mazs.csv")
 
 parcels_centroid = parcels.copy()
@@ -52,20 +52,9 @@ drop_apns = pd.concat([
     pd.Series(v) for v in fully_contained_parcels.values()])
 
 parcels_no_contains = parcels.set_index("apn").drop(drop_apns)
+del parcels_no_contains["maz_id"]
 
-parcels_no_contains.to_csv("%s_parcels_no_self_intersections.csv" % juris)
-
-'''
-buildings_centroid = buildings.copy()
-buildings_centroid["geometry"] = buildings.centroid
-buildings_linked_to_mazs = gpd.sjoin(buildings_centroid, mazs)
-
-buildings["maz_id"] = buildings_linked_to_mazs["maz_id"]
-
-maz_filter = lambda x: x.maz_id == maz_id
-intersections = [
-    gpd.sjoin(buildings[maz_filter], parcels_no_contains[maz_filter])
-    for maz_id in parcels_no_contains.maz_id.unique()
-]
-df = pd.concat(intersections)
-'''
+num_intersections = len(parcels) - len(parcels_no_contains)
+print "%d parcels dropped because of self-intersections" % num_intersections
+parcels_no_contains.to_csv(
+    "cache/%sparcels_no_self_intersections.csv" % prefix)

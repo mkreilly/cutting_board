@@ -13,9 +13,11 @@ prefix = args[0] + "_" if len(args) else ""
 
 print "Loading parcels and mazs"
 print time.ctime()
-parcels = gpd.read_geocsv("cache/%sparcels.csv" % prefix)
+parcels = gpd.read_geocsv("cache/%sparcels_no_self_intersections.csv" % prefix,
+                          low_memory=False)
 bad_apns = ["999 999999999"]
 parcels = parcels[~parcels.apn.isin(bad_apns)]
+parcels = parcels[parcels.apn.notnull()]
 parcels["orig_apn"] = parcels["apn"]
 mazs = gpd.read_geocsv("mazs.csv")[["maz_id", "geometry"]]
 
