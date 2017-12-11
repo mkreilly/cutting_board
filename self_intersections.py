@@ -1,5 +1,6 @@
 import geopandas as gpd
 import pandas as pd
+import numpy as np
 import shared
 import sys
 
@@ -48,10 +49,36 @@ fully_contained_parcels = merge_dicts(
     find_fully_contained_parcels(grouped_parcels)
     for index, grouped_parcels in parcels.groupby("maz_id"))
 
+
+def merge_parcel_attributes(parcels, drop_list):
+    new_parcels = parcels.copy()
+
+    # iterate over the parcels we're going to merge and merge
+    # attributes across parent and children
+    for parent_apn, child_apns in drop_list.iteritems():
+        parent = parcels.loc[parent_apn]
+        children = parcels.loc[child_apns]
+        both = children.append(parent)
+
+        # sum these up
+        for attr in ["bldg_sqft", "nres_sqft", "res_units"]:
+            new_parcels.loc[parent_apn, attr] = both[attr].sum()
+
+        # take most frequent occurring for these
+        for attr in ["dev_type", "stories", "year_built"]:
+            mode = both[attr].mode()
+            mode = mode.values[0] if len(mode) else np.nan
+            new_parcels.loc[parent_apn, attr] = mode
+
+    return new_parcels
+
+parcels.set_index("apn", inplace=True)
+parcels = merge_parcel_attributes(parcels, fully_contained_parcels)
+
 drop_apns = pd.concat([
     pd.Series(v) for v in fully_contained_parcels.values()])
 
-parcels_no_contains = parcels.set_index("apn").drop(drop_apns)
+parcels_no_contains = parcels.drop(drop_apns)
 del parcels_no_contains["maz_id"]
 
 num_intersections = len(parcels) - len(parcels_no_contains)

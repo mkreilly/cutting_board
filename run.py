@@ -5,7 +5,6 @@ import sys
 args = sys.argv[1:]
 
 # TODO
-# combine attributes when collapsing self-intersections
 # combine files deal with duplicate ids
 
 
