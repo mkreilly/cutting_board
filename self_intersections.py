@@ -24,6 +24,10 @@ def find_fully_contained_parcels(parcels):
     # next operation fails for invalid parcels, of which there are a few
     parcels = parcels[parcels.is_valid]
 
+    if not len(parcels):
+        # no valid parcels in this maz, causes an error in the sjoin
+        return {}
+
     # find intersections
     intersections = gpd.sjoin(parcels, parcels.copy(), op="contains")
     # filter to non-self-intersections
@@ -75,8 +79,11 @@ def merge_parcel_attributes(parcels, drop_list):
 parcels.set_index("apn", inplace=True)
 parcels = merge_parcel_attributes(parcels, fully_contained_parcels)
 
-drop_apns = pd.concat([
-    pd.Series(v) for v in fully_contained_parcels.values()])
+if len(fully_contained_parcels):
+    drop_apns = pd.concat([
+        pd.Series(v) for v in fully_contained_parcels.values()])
+else:
+    drop_apns = []
 
 parcels_no_contains = parcels.drop(drop_apns)
 del parcels_no_contains["maz_id"]
