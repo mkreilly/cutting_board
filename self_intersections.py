@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import shared
 import sys
+from shapely.geometry import Polygon
 
 args = sys.argv[1:]
 prefix = args[0] + "_" if len(args) else ""
@@ -60,6 +61,12 @@ fully_contained_parcels = merge_dicts(
     for index, grouped_parcels in parcels.groupby("maz_id"))
 
 
+def drop_interior_geometry(shp):
+    if shp.type != "Polygon":
+        return shp
+    return Polygon(shp.exterior)
+
+
 def merge_parcel_attributes(parcels, drop_list):
     new_parcels = parcels.copy()
 
@@ -79,6 +86,9 @@ def merge_parcel_attributes(parcels, drop_list):
             mode = both[attr].mode()
             mode = mode.values[0] if len(mode) else np.nan
             new_parcels.loc[parent_apn, attr] = mode
+
+        new_parcels.at[parent_apn, "geometry"] = \
+            drop_interior_geometry(parent.geometry)
 
     return new_parcels
 
