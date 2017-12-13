@@ -22,7 +22,13 @@ parcels["maz_id"] = parcels_linked_to_mazs["maz_id"]
 # parcel id
 def find_fully_contained_parcels(parcels):
     # next operation fails for invalid parcels, of which there are a few
-    parcels = parcels[parcels.is_valid]
+    parcels = parcels[parcels.is_valid].copy()
+
+    # this is because condos are often "cut out" of their parent parcel - we
+    # want to drop the "cut out" part when doing the contains below
+    # convex hull might not be precisely what we want here, but it
+    # is close and I can't think of any major side effects
+    parcels["geometry"] = parcels.convex_hull
 
     if not len(parcels):
         # no valid parcels in this maz, causes an error in the sjoin
