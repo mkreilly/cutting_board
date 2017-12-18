@@ -57,11 +57,16 @@ def assign_parcel_attributes_to_buildings(buildings, parcels):
         'building': 'osm_building_type'})
     buildings['calc_area'] = compute_area(buildings).round()
 
+    # generated buildings don't count as small sheds - geometry is made up
+    small_buildings_mask = \
+        (buildings.name != "Generated from parcel centroid") & \
+        (buildings.calc_area < 80)
+
     # we call a building a shed if it's less than 50 meters large and it
     # doesn't get any of the parcel data
-    small_buildings = buildings[buildings.calc_area < 80].copy()
+    small_buildings = buildings[small_buildings_mask].copy()
     small_buildings["small_building"] = True
-    large_buildings = buildings[buildings.calc_area >= 80].copy()
+    large_buildings = buildings[~small_buildings_mask].copy()
     large_buildings["small_building"] = False
 
     large_buildings["stories"] = large_buildings.stories.fillna(

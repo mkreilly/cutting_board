@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import shared
 import sys
+from shapely.geometry import Polygon
 
 args = sys.argv[1:]
 prefix = args[0] + "_" if len(args) else ""
@@ -22,7 +23,17 @@ parcels["maz_id"] = parcels_linked_to_mazs["maz_id"]
 # parcel id
 def find_fully_contained_parcels(parcels):
     # next operation fails for invalid parcels, of which there are a few
-    parcels = parcels[parcels.is_valid]
+    parcels = parcels[parcels.is_valid].copy()
+
+    # this is because condos are often "cut out" of their parent parcel - we
+    # want to drop the "cut out" part when doing the contains below
+    # convex hull might not be precisely what we want here, but it
+    # is close and I can't think of any major side effects
+    parcels["geometry"] = parcels.convex_hull
+
+    if not len(parcels):
+        # no valid parcels in this maz, causes an error in the sjoin
+        return {}
 
     # find intersections
     intersections = gpd.sjoin(parcels, parcels.copy(), op="contains")
@@ -50,6 +61,12 @@ fully_contained_parcels = merge_dicts(
     for index, grouped_parcels in parcels.groupby("maz_id"))
 
 
+def drop_interior_geometry(shp):
+    if shp.type != "Polygon":
+        return shp
+    return Polygon(shp.exterior)
+
+
 def merge_parcel_attributes(parcels, drop_list):
     new_parcels = parcels.copy()
 
@@ -70,13 +87,19 @@ def merge_parcel_attributes(parcels, drop_list):
             mode = mode.values[0] if len(mode) else np.nan
             new_parcels.loc[parent_apn, attr] = mode
 
+        new_parcels.at[parent_apn, "geometry"] = \
+            drop_interior_geometry(parent.geometry)
+
     return new_parcels
 
 parcels.set_index("apn", inplace=True)
 parcels = merge_parcel_attributes(parcels, fully_contained_parcels)
 
-drop_apns = pd.concat([
-    pd.Series(v) for v in fully_contained_parcels.values()])
+if len(fully_contained_parcels):
+    drop_apns = pd.concat([
+        pd.Series(v) for v in fully_contained_parcels.values()])
+else:
+    drop_apns = []
 
 parcels_no_contains = parcels.drop(drop_apns)
 del parcels_no_contains["maz_id"]

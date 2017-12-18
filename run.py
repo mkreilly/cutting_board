@@ -48,7 +48,6 @@ jurises = [
     f for f in jurises if
     not os.path.exists("cache/%s_buildings_match_controls.csv" % f)]
 
-# jurises = [f for f in jurises if f != "San Jose"]
 jurises = [f for f in jurises if f != "Unincorporated San Francisco"]
 
 if len(args):

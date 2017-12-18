@@ -293,7 +293,7 @@ buildings_linked_to_parcels = gpd.GeoDataFrame(pd.concat([
     unioned_buildings
 ]))
 
-
+del buildings["maz_id"]
 # don't keep all the columns
 buildings_linked_to_parcels = \
     buildings_linked_to_parcels[list(buildings.columns) + ["apn"]]
