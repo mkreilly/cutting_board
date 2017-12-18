@@ -1,104 +1,91 @@
-import geopandas as gpd
 import pandas as pd
+import numpy as np
+import geopandas as gpd
 import shared
-import osmnx
+import sys
 
-print "Reading data"
-buildings = gpd.read_geocsv(
-    "cache/buildings_match_controls.csv", index_col="building_id")
-parcels = gpd.read_geocsv("cache/moved_attribute_parcels.csv", index_col="apn")
-establishments = gpd.read_geocsv(
-    "cache/establishments.csv", index_col="duns_number")
-mazs = gpd.read_geocsv("mazs.csv", index_col="maz_id")
+args = sys.argv[1:]
+sectors = [
+  'ag', 'natres', 'util', 'constr', 'man_lgt', 'man_hvy', 'man_bio',
+  'man_tech', 'logis', 'ret_reg', 'ret_loc', 'transp', 'info', 'fire',
+  'serv_pers', 'lease', 'prof', 'serv_bus', 'ed_k12', 'ed_high',
+  'ed_other', 'health', 'serv_soc', 'art_rec', 'hotel', 'eat', 'gov',
+  'mis']
+maz_controls = pd.read_csv("maz_controls.csv", index_col="MAZ_ORIGINAL")
+buildings = gpd.read_geocsv(args[0], index_col="building_id")
 
-berkeley = osmnx.gdf_from_place("Berkeley, California")
-berkeley_mazs = gpd.sjoin(mazs, berkeley).drop("index_right", axis=1)
 
-print "Intersecting with buildings"
-# goal here is to create a dictionary where keys are establishments ids and
-# values are possible building_ids - this lets us write a function to assign
-# jobs to buildings.  when we have a match to a parcel, we list the buildings
-# on that parcel; when we have a match to a maz, we list the buildings in
-# that maz.
-establishments_intersect_buildings = gpd.sjoin(establishments, buildings)
-establishments_possible_buildings = {
-    k: [v]
-    for k, v
-    in establishments_intersect_buildings.index_right.to_dict().iteritems()
+sqft_per_job = {
+  "HS": 400,
+  "HT": 400,
+  "HM": 400,
+  "OF": 355,
+  "HO": 1161,
+  "SC": 470,
+  "IL": 661,
+  "IW": 960,
+  "IH": 825,
+  "RS": 445,
+  "RB": 445,
+  "MR": 383,
+  "MT": 383,
+  "ME": 383
 }
+buildings["sqft_per_job"] = buildings.building_type.map(sqft_per_job).\
+    reindex(buildings.index).fillna(400)
+buildings["job_spaces"] = (
+    buildings.non_residential_sqft / buildings.sqft_per_job).\
+    round().fillna(0).astype("int")
 
 
-print "Intersecting with parcels"
-# intersect establishments and parcels, and drop intersections from buildings
-parcels["num_buildings"] = \
-    buildings.apn.value_counts().reindex(parcels.index).fillna(0)
-# don't bother intersect with parcels which don't have buildings
-# we'll cover those with mazs
-establishments_intersect_parcels = gpd.sjoin(
-    establishments, parcels[parcels.num_buildings > 0])
-establishments_intersect_parcels.drop(establishments_possible_buildings.keys(),
-                                      inplace=True, errors='ignore')
-del parcels["num_buildings"]
+new_jobs = []
+for maz_id in buildings.maz_id.unique():
+    maz_control = maz_controls.loc[maz_id]
+    building_options = buildings[buildings.maz_id == maz_id]
+    building_id_options = np.repeat(
+        building_options.index, building_options.job_spaces)
+    assert building_options.job_spaces.sum() == building_id_options.size
 
-establishments_possible_buildings.update({
-    establishment_id: buildings[buildings.apn == apn].index
-    for establishment_id, apn
-    in establishments_intersect_parcels.index_right.iteritems()
-})
+    np.random.shuffle(sectors)
+    cnts = [maz_control.get(sector, 0) for sector in sectors]
+    sectors_fanned_out = np.repeat(sectors, cnts)
 
+    cnt = sectors_fanned_out.size
+    if cnt == 0:
+        continue
+    excess_cnt = max(cnt - building_id_options.size, 0)
+    cnt -= excess_cnt
 
-print "Intersecting with mazs"
-# intersect establishments from mazs, and drop intersections from buildings
-# and parcels
-berkeley_mazs["num_buildings"] = buildings.maz_id.value_counts().\
-    reindex(berkeley_mazs.index).fillna(0)
-establishments_intersect_mazs = gpd.sjoin(
-    establishments, berkeley_mazs[berkeley_mazs.num_buildings > 0])
-establishments_intersect_mazs.drop(establishments_possible_buildings.keys(),
-                                   inplace=True, errors='ignore')
-del berkeley_mazs["num_buildings"]
+    # select w/o replacement from available job spaces, for only those
+    # jobs that fit
+    assignment = np.random.choice(
+      building_id_options, size=cnt, replace=False) if cnt else []
 
-establishments_possible_buildings.update({
-    establishment_id: buildings[buildings.maz_id == maz_id].index
-    for establishment_id, maz_id
-    in establishments_intersect_mazs.index_right.iteritems()
-})
+    # select w/ replacement from all building if not enough job spaces
+    if excess_cnt:
+        excess_assignment = np.random.choice(
+            building_options.index, size=excess_cnt, replace=True)
+        assignment = np.concatenate((assignment, excess_assignment))
 
-
-def assign_establishments_to_buildings(establishments_possible_buildings):
-    def assign_establishment_to_buildings(eid, building_ids):
-        if len(buildings) == 1:
-            return building_ids[0]
-
-        possible_buildings = buildings.loc[building_ids]
-
-        if possible_buildings.non_residential_sqft.sum() == 0:
-            # there's no non-res buildings - assign to random building
-            return possible_buildings.sample().index[0]
-
-        return possible_buildings.sample(
-            weights="non_residential_sqft").index[0]
-
-    return pd.Series({
-        eid: assign_establishment_to_buildings(eid, buildings)
-        for eid, buildings in establishments_possible_buildings.iteritems()
-    })
+    new_jobs.append(pd.DataFrame({
+        "sector": sectors_fanned_out,
+        "building_id": assignment
+    }))
+new_jobs = pd.concat(new_jobs)
+new_jobs["job_id"] = new_jobs.index + 1
+print "New jobs by sector"
+print new_jobs.sector.value_counts()
 
 
-print "Picking buildings from among options"
-establishments["building_id"] = \
-    assign_establishments_to_buildings(establishments_possible_buildings)
-berkeley_establishments = establishments[establishments.building_id.notnull()]
+# we want to move this to the maz or probably taz level, but for
+# now we use a regional number
+REGIONAL_VACANCY_RATE = .05
 
-outdf = berkeley_establishments.loc[
-    berkeley_establishments.index.repeat(
-        berkeley_establishments.local_employment)
-][["PBA_category", "building_id"]]
+# adjust the unit counts so that the number of job spaces is on average
+# equal to the vacancy rate
+buildings["job_spaces"] = (new_jobs.building_id.value_counts() *
+                           (1 + REGIONAL_VACANCY_RATE)).round().astype("int")
 
 
-print "Writing data"
-outdf.index.name = "establishment_id"
-outdf.reset_index(inplace=True)
-outdf.index.name = "job_id"
-outdf.index = outdf.index + 1  # starts at zero
-outdf.to_csv("cache/jobs.csv")
+new_jobs.to_csv("cache/jobs.csv", index=False)
+buildings.to_csv("cache/buildings_adjusted_for_jobs.csv")
