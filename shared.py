@@ -60,7 +60,7 @@ def compute_overlap_areas(overlaps, overlapees):
                 gpd.GeoDataFrame([overlapee]), how="intersection")
         except:
             overlap_area.append(np.nan)
-            print "Failed:", index
+            print("Failed:", index)
             continue
 
         if len(overlap_poly) == 0:
