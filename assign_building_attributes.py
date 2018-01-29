@@ -59,7 +59,7 @@ def assign_parcel_attributes_to_buildings(buildings, parcels):
 
     # generated buildings don't count as small sheds - geometry is made up
     small_buildings_mask = \
-        (buildings.name != "Generated from parcel centroid") & \
+        (buildings.name.astype("str") != "Generated from parcel centroid") & \
         (buildings.calc_area < 80)
 
     # we call a building a shed if it's less than 50 meters large and it
