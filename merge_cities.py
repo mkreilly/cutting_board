@@ -12,9 +12,9 @@ buildings = pd.concat(buildings)
 # ids are duplicate across cities.  Fortunately the osm buildings ids are
 # very large and we can pick an arbitrary cutoff and create globally
 # unique building ids for those
-mask = pd.to_numeric(buildings.building_id, errors="coerce")  > 100000
-unique_buildings = buildings[mask]
-dup_buildings = buildings[~mask]
+mask = pd.to_numeric(buildings.building_id, errors="coerce") > 100000
+unique_buildings = buildings[mask].copy()
+dup_buildings = buildings[~mask].copy()
 
 dup_buildings["building_id"] = np.arange(len(dup_buildings))+1
 buildings = pd.concat([unique_buildings, dup_buildings])
@@ -25,8 +25,12 @@ still_duplicate_buildings.to_csv("foo.csv")
 buildings.to_csv("bayarea_buildings.csv", index=False)
 
 
-parcels = glob.glob("cache/*buildings_match_controls.csv")
+parcels = glob.glob("cache/*moved_attribute_parcels.csv")
+juris_names = [p.replace("_moved_attribute_parcels.csv", "").
+               replace("cache/", "") for p in parcels]
 parcels = [pd.read_csv(p) for p in parcels]
+for i in range(len(parcels)):
+    parcels[i]["juris_name"] = juris_names[i]
 parcels = pd.concat(parcels)
 
 print parcels.apn.value_counts()
