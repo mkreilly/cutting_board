@@ -42,6 +42,9 @@ dup_parcels = parcels[mask].copy()
 dup_parcels["apn"] = np.arange(len(dup_parcels))+1
 parcels = pd.concat([unique_parcels, dup_parcels])
 
-print parcels.apn.value_counts()
+# FIXME this appends the whole juris name to the apn to make it unique
+# instead this should be 4 character abbreviations
+parcels["apn"] = parcels.juris_name.str.cat(
+    parcels.apn.astype("str"), sep="-")
 
 parcels.to_csv("bayarea_parcels.csv", index=False)
