@@ -30,6 +30,11 @@ buildings = osmnx.buildings.create_buildings_gdf(place.iloc[0].geometry)
 print "Done fetching buildings", time.ctime()
 print "Len buildings: %d" % len(buildings)
 
+print "Keeping buildings completely within this city"
+is_within = buildings.within(place.iloc[0].geometry)
+buildings = buildings[is_within]
+print "Len buildings: %d" % len(buildings)
+
 for col in ['addr:city', 'addr:housenumber', 'addr:postcode', 'addr:state',
             'addr:street', 'amenity', 'name']:
     if col not in buildings.columns:

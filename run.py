@@ -32,8 +32,8 @@ counties = ["Solano", "Sonoma", "San Francisco", "San Mateo",
             "Santa Clara", "Napa", "Marin", "Contra Costa",
             "Alameda"]
 
-# initialize_census_for_region()
-# pool.map(initialize_county, counties)
+initialize_census_for_region()
+pool.map(initialize_county, counties)
 
 jurises = []
 for county in counties:
