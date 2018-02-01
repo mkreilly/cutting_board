@@ -41,6 +41,20 @@ def compute_pct_area(df, total_area):
     return df
 
 
+# returns true when shape1 is more than 50% overlapping shape2
+def more_than_half_inside(shape1, shape2):
+    overlap = gpd.overlay(
+                gpd.GeoDataFrame([shape1]),
+                gpd.GeoDataFrame([shape2]), how="intersection")
+
+    if len(overlap) == 0:
+        return False
+
+    overlap_area = compute_area(overlap).values[0]
+    poly1_area = compute_area(gpd.GeoDataFrame([shape1])).values[0]
+    return overlap_area / poly1_area > .5
+
+
 def compute_overlap_areas(overlaps, overlapees):
     '''
     After a spatial join is done, this computes the actual area of the overlap.

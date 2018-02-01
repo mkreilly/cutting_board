@@ -20,6 +20,7 @@ buildings["residential_units"] = \
 
 household_assignment = []
 for maz_id in buildings.maz_id.unique():
+    print maz_id
     maz_households = households[households.maz_id == maz_id]
     building_options = buildings[buildings.maz_id == maz_id]
     building_id_options = np.repeat(
