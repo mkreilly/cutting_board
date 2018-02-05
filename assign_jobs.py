@@ -15,6 +15,19 @@ maz_controls = pd.read_csv("maz_controls.csv", index_col="MAZ_ORIGINAL")
 buildings = gpd.read_geocsv(args[0], index_col="building_id")
 
 
+# there are at least 2 reasons right now to have a dummy building per maz which
+# does not technically have a parcel link - 1) for group quarters and 2) for
+# jobs in mazs which have no building.  instead of just randomly selecting a
+# parcel to add a building record to, we leave them associated with each maz
+def add_dummy_buildings_per_maz(buildings):
+    dummy_df = pd.DataFrame({"maz_id": maz_controls.index})
+    dummy_df["name"] = "MAZ-level dummy building"
+    dummy_df.index = ["MAZBLDG-" + str(d) for d in dummy_df.maz_id.values]
+    return pd.concat([buildings, dummy_df])
+
+buildings = add_dummy_buildings_per_maz(buildings)
+    
+
 sqft_per_job = {
   "HS": 400,
   "HT": 400,
@@ -39,12 +52,8 @@ buildings["job_spaces"] = (
 
 
 new_jobs = []
-for maz_id in buildings.maz_id.unique():
+for maz_id in maz_controls.index:
     maz_control = maz_controls.loc[maz_id]
-    building_options = buildings[buildings.maz_id == maz_id]
-    building_id_options = np.repeat(
-        building_options.index, building_options.job_spaces)
-    assert building_options.job_spaces.sum() == building_id_options.size
 
     np.random.shuffle(sectors)
     cnts = [maz_control.get(sector, 0) for sector in sectors]
@@ -53,6 +62,12 @@ for maz_id in buildings.maz_id.unique():
     cnt = sectors_fanned_out.size
     if cnt == 0:
         continue
+
+    building_options = buildings[buildings.maz_id == maz_id]
+    building_id_options = np.repeat(
+        building_options.index, building_options.job_spaces)
+    assert building_options.job_spaces.sum() == building_id_options.size
+
     excess_cnt = max(cnt - building_id_options.size, 0)
     cnt -= excess_cnt
 
@@ -61,7 +76,7 @@ for maz_id in buildings.maz_id.unique():
     assignment = np.random.choice(
       building_id_options, size=cnt, replace=False) if cnt else []
 
-    # select w/ replacement from all building if not enough job spaces
+    # select w/ replacement from all buildings if not enough job spaces
     if excess_cnt:
         excess_assignment = np.random.choice(
             building_options.index, size=excess_cnt, replace=True)
