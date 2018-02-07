@@ -18,38 +18,45 @@ All data is included in this repo except for the parcel data, which is stored in
     2) the census data above is aggregated from block to maz using block-to-maz map
     3) the counties are run in order and jurisdictions are assigned and parcels are split by jurisdiction (a list of jurisdictions is also kept)
 
-* Fetch buildings from OSM (fetch_buildings.py
+* Fetch buildings from OSM (fetch_buildings.py) - we use OSMNX to fetch buildings over the Overpass api (OSM) for the shape which is th boundary of the jurisdiction
 
-* Split parcel geometry by MAZ
+* Remove stacked parcels (self_intersections.py)
+  * This script is used to identify and remove stacked parcels, which means all parcels which are fully contained or sufficiently the same as another parcel (often used for condos).  There is logic here to merge the data from the dropped parcels as appropriate.  This creates a "cache/%sparcels_no_self_intersections.csv" file for each juris.
+
+* Split parcel geometry by MAZ (split_parcels.py)
   * Parcels with a single MAZ intersection are assigned to that MAZ
   * Parcels with no MAZ intersection are dropped
   * Parcels with multiple MAZ interesections are split into those MAZs, and "slivers" are unioned back to the main parcel
     * at this point parcels which have been split have copies of the attribute data (e.g. building sqft).  This should be split among the split parcels, but we want to use building information to do this wisely, so we need to join to buildings first.
-* Assign building footprints to parcel splits
+  * This creates a "cache/%ssplit_parcels.csv" for each juris.
+    
+* Assign building footprints to parcel splits (join_buildings_to_parcels.py)
   * If a footprint intersects a majority within a single parcel (set to 70% right now), it is assigned to that parcel
   * Small footprints which overlap multiple parcels are dropped (these are shed, garages, carports, etc), and aren't important enough to worry about
   * We then assign a footprint to multiple parcels, while ignoring sliver overlaps.
     * If a footprint significantly overlaps multiple parcels, and those parcels all contain data, it is split among those parcels.  These are often townhomes which have separate parcels but share a wall.
-    * If a footprint significantly overlaps multiple parcels, and only one parcel contains data, the parcels which do not have data are merged into the primary parcel.  Ikea, Kaiser, parts of Berkeley are all examples of this, where multiple parcels are now under a single owner.    
-* Attributes are now moved from parcels to buildings.  At the end of this process, attributes like year_built, building_sqft, residential_units and so forth will be a part of the building dataframe, not the parcel dataframe.
+    * If a footprint significantly overlaps multiple parcels, and only one parcel contains data, the parcels which do not have data are merged into the primary parcel.  Ikea, Kaiser, parts of Berkeley are all examples of this, where multiple parcels are now under a single owner.
+  * This creates a new buildings file ("cache/%sbuildings_linked_to_parcels.csv") and a new parcels file ("cache/%ssplit_parcels_unioned.csv") for each juris.
+    
+* Attributes are now moved from parcels to buildings.  At the end of this process, attributes like year_built, building_sqft, residential_units and so forth will be a part of the building dataframe, not the parcel dataframe. (assign_building_attributes.py)
   * These are assigned proportionally based on the built area (area of footprint times number of stories) of each footprint.
   * Small footprints (sheds, garages, etc) do not take these attributes.
   * Parcels that have attributes but no building footprint will be given a default geometry like a circle around the parcel centroid.
   * Parcel attributes which were copied among multiple split parcels should be assigned carefully.  The attributes should be split among the building footprints associated with each of the subparcels of each parcel.
+  * This creates new parcels ("cache/%smoved_attribute_parcels.csv") with no attributes, and new buildings ("cache/%smoved_attribute_buildings.csv") with the new attributes.
 
-#### Proposed Methodlogy (In Progress)
+* Impute units using the census data as controls (match_unit_controls.py)
+  * We fetch census data and aggregate it from blocks to mazs (as described above)
+  * We then increase/descrease the units in each building to match the control using a random sample.  We don't add a new building in this step, only increase and descrease the number of units.
 
-* Find non-developed parts of parcels.  Another key benefit of this approach is to identify parts of a parcel where there is not currently a building footprint.  These can be used e.g. to identify parking lots and thus areas that are more likely to develop.
-* Use CoStar for non-residential space
-* Add scheduled development events
+#### Post-processing steps (mainly household and job assignment)
 
-#### Assignment
+* These scripts are not currently executed by run.py, because their run time is short compared to what happens in run.py, and they are only run once, not once per juris.
 
-* We now have the parcel attributes assigned to building and located each within a single maz.  We can aggregate up to maz totals of residential units and non residential sqft (or jobs) and extra units to buildings based on where buildings currently exist.
-  * We should also take into account building records without attributes at that point (e.g. a building record with no unit count in a MAZ that needs units should target that building record), and also a building footprint with no attributes (because the parcel didn't have attributes) is also a likely candidate.
-  * In the end we will have building footprints assigned to sub-parcels assigned to MAZs.  The buildings will have unit counts and non residential square feet that sum to the maz unit counts and job spaces.  Some of the buildings will have geometry from OSM, and some will be circles at the parcel centroid.
+* First the parcel and building data is merged for all jurisdictions (merge_cities.py), including some modifications to the building and parcel ids.  This creates "cache/merged_parcels.csv" and "cache/merged_buildings.csv"
 
-#### Other Tasks from SPANDEX
-
-* Condos and stacked detection
-* Join to jurisdictions and other administrative boundaries
+* Assign households (assign_households.py)
+  * Assign households - the controls for this actually come from the maz_controls.py, but the households have already been synthesized in a step by another consultant.  The job here is to read in the households.csv (stored in the repo as households.csv.zip) and assign a building_id based on the maz_id already assigned to the household.  We don't currently use a model to assign specific households to appropriate building types, but we could (MAZs probably are more homogeneous in building types than TAZs would be).  We also increase the number of units in a building if we end up with more households than units (technically this shouldn't happen as both units and household counts come from the census, but it does happen).  This creates "cache/buildings_adjusted_for_households.csv" and "cache/households.csv".
+  
+* Assign jobs (assign_jobs.py)
+  * This takes the controls from maz_controls.csv and actually creates records for every job and assigns a building id for each job record.  It also increases the number of job spaces in buildings that are overful from this process (which happens a lot because non_residential_sqft is not a reliable field in the parcel data.  Right now we use our jobs dataset at the maz level as the thing which controls how much non-res space to assign (rather than using CoStar).  This is so that we can publicly release all of our data since CoStar is private data and past datasets based on CoStar have been un-releasable.  This step creates "cache/buildings_adjusted_for_jobs.csv" and "cache/jobs.py"
