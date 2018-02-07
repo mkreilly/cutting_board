@@ -13,7 +13,7 @@ All data is included in this repo except for the parcel data, which is stored in
 #### Methodlogy
 
 * Run orchestration (run.py)
-  * run.py (which does not use orca for orchestration) is responsible for reading in the list of jurisdictions and processing them one at a time.  The set of scripts which is run on each jurisdiction is decribed one a a time below.  There are three preparation steps which run before the list of jurisdictions is processed.
+  * run.py (which does not use orca for orchestration) is responsible for reading in the list of jurisdictions and processing them one at a time.  The set of scripts which is run on each jurisdiction is decribed one a a time below.  There are three preparation steps which run before the list of jurisdictions is processed.  (Make sure to unzip zipped files in the data directory or some steps will fail.)
     1) census data (controls for unit counts) for the region is fetched using fetch_census_data.py
     2) the census data above is aggregated from block to maz usinga a block-to-maz map (block_to_maz_controls.py)
     3) the counties are run in order and jurisdictions are assigned and parcels are split by jurisdiction (a list of jurisdictions is also kept) (split_by_city.py)
@@ -61,8 +61,8 @@ All data is included in this repo except for the parcel data, which is stored in
 * Assign jobs (assign_jobs.py)
   * This takes the controls from maz_controls.csv and creates records for every job and assigns a building id for each job record.  It also increases the number of job spaces in buildings that are overfull from this process (which happens a lot because non_residential_sqft is not a reliable field in the parcel data.  Right now we use our jobs dataset at the maz level as the data which controls how much non-res space to assign (rather than using CoStar).  This is so that we can publicly release all of our data as CoStar is private data and past datasets based on CoStar have had to be kept private.  This step creates "cache/buildings_adjusted_for_jobs.csv" and "cache/jobs.py"
   
-#### If you're keeping score, final files at the time of this writing are:
-* households.csv
-* jobs.csv
-* buildings_adjusted_for_jobs.csv
-* merged_parcels.csv
+#### If you're keeping score, final files at the time of this writing end up in:
+* cache/households.csv
+* cache/jobs.csv
+* cache/buildings_adjusted_for_jobs.csv
+* cache/merged_parcels.csv
