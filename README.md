@@ -1,5 +1,10 @@
 # cutting_board
-Tools to help slice parcels according to geography and information on where buildings are within the parcel
+
+This is a set of scripts which is used to create parcels, buildings, households, and jobs datasets as inputs to MTC's UrbanSim model.  There is a rich history of practice in doing this and many examples to follow (most recently the Spandex scripts from Synthicity) - this set of scripts aims to keep things simple by 1) using only csv files as inputs and outputs 2) using geopandas instead of postgis for all spatial operations thus eliminating the need for db install, and 3) parallelizing by city for most steps, which allows multiprocessing for speed up.  The whole process takes about 40 hours in compute time but can run in about 11 hours on 4 cpus on an Amazon EC2 machine.
+
+The main problem we're trying to solve it twofold.  First now that MTC's travel model system has a set of MAZs instead of TAZs (40k zones instead of 1.5k), there are many parcels that are larger than MAZs, and many large parcels in general.  We want to be able to locate the actual source and destinations of travel on those parcels by actually locating the buildings on the parcel, and we do that by using OpenStreetMaps significant (but not entirely complete) building footprint dataset.  This also helps us disaggregate parcel data within the parcel to buildings on the parcel.  For example, Berkeley's campus is a single parcel, but 5 or so MAZs.  Locating the building footprints on the parcel helps us know where the actual travel origins and destinations are on the campus.
+
+The second reason for doing this is to attempt to identify parcels which are built up on one area of the parcel, but which are not on another large contiguous area, usually from being used for parking in shopping malls or corporate campuses.  Where there is a lot of pressure for development, these parking lots are ripe for redevelopment, and if we don't consider sub-parcel areas we can't know which parcels are fully covered by a short building, and which parcels have a modest height building on part of the parcel and a parking lot on the other side.
 
 #### Proposed Methodlogy (Completed)
 
