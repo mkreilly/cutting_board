@@ -5,7 +5,7 @@ block_totals = block_totals.drop(
     ["tract", "state", "county", "block"], axis=1)
 
 maz_map = pd.read_csv(
-    "GeogXWalk2010_Blocks_MAZ_TAZ.csv",
+    "data/GeogXWalk2010_Blocks_MAZ_TAZ.csv",
     dtype={
         "COUNTYFP10": "string",
         "GEOID10": "string"

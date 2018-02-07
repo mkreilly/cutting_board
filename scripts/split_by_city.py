@@ -18,7 +18,7 @@ cities_in_this_county = [
 # get a url for a lfs file
 url = "%s_parcels.zip" % lower_county
 parcels = gpd.read_geocsv(url, low_memory=False)
-juris = gpd.GeoDataFrame.from_file("juris.geojson")
+juris = gpd.GeoDataFrame.from_file("data/juris.geojson")
 
 # filter to jurisdictions in this county so as not to mis-assign
 # egregiously - of course we might still mis-assign within the county

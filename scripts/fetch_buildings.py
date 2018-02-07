@@ -14,7 +14,7 @@ juris = args[0]
 fetch_juris = juris if juris != "Ross" else "San Anselmo"
 
 print "Fetching buildings from OSM", time.ctime()
-jurises = gpd.GeoDataFrame.from_file("juris.geojson")
+jurises = gpd.GeoDataFrame.from_file("data/juris.geojson")
 
 print "Fetching for:", juris
 if "Unincorporated" in juris:

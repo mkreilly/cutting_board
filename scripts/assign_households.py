@@ -7,12 +7,12 @@ import sys
 
 args = sys.argv[1:]
 
-households = pd.read_csv("households.csv", index_col="HHID")
+households = pd.read_csv("data/households.csv", index_col="HHID")
 gq_households = households[households.GQFlag == 1]
 households = households[households.GQFlag == 0]
 
 buildings = gpd.read_geocsv(args[0], index_col="building_id")
-maz_controls = pd.read_csv("maz_controls.csv")
+maz_controls = pd.read_csv("data/maz_controls.csv")
 
 households["maz_id"] = \
     households.maz.map(maz_controls.set_index("MAZ").MAZ_ORIGINAL).values

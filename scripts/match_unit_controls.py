@@ -12,7 +12,7 @@ buildings = gpd.read_geocsv(
 parcels = gpd.read_geocsv("cache/%smoved_attribute_parcels.csv" % prefix,
                           index_col="apn")
 controls = pd.read_csv("cache/maz_unit_controls.csv", index_col="maz_id")
-mazs = gpd.read_geocsv("mazs.csv", index_col="maz_id")
+mazs = gpd.read_geocsv("data/mazs.csv", index_col="maz_id")
 buildings["apn"] = buildings.apn.astype("str")
 buildings["building_type"] = buildings.building_type.astype("str")
 buildings["maz_id"] = parcels.maz_id.loc[buildings.apn].values

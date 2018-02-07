@@ -19,7 +19,7 @@ bad_apns = ["999 999999999"]
 parcels = parcels[~parcels.apn.isin(bad_apns)]
 parcels = parcels[parcels.apn.notnull()]
 parcels["orig_apn"] = parcels["apn"]
-mazs = gpd.read_geocsv("mazs.csv")[["maz_id", "geometry"]]
+mazs = gpd.read_geocsv("data/mazs.csv")[["maz_id", "geometry"]]
 
 # join mazs to parcels
 print "Joining parcels to mazs"

@@ -8,8 +8,8 @@ from shapely.geometry import Polygon
 args = sys.argv[1:]
 prefix = args[0] + "_" if len(args) else ""
 
-parcels = gpd.read_geocsv("cache/%sparcels.csv" % prefix, low_memory=False)
-mazs = gpd.read_geocsv("mazs.csv")
+parcels = gpd.read_geocsv("parcels/%sparcels.csv" % prefix, low_memory=False)
+mazs = gpd.read_geocsv("data/mazs.csv")
 
 parcels_centroid = parcels.copy()
 parcels_centroid["geometry"] = parcels.centroid

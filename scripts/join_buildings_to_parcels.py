@@ -16,7 +16,7 @@ buildings = gpd.read_geocsv("cache/%sbuildings.csv" % prefix, low_memory=False,
                             index_col="building_id")
 split_parcels = gpd.read_geocsv("cache/%ssplit_parcels.csv" % prefix,
                                 index_col="apn", low_memory=False)
-mazs = gpd.read_geocsv("mazs.csv")[["maz_id", "geometry"]]
+mazs = gpd.read_geocsv("data/mazs.csv")[["maz_id", "geometry"]]
 
 
 def assign_maz_id_by_centroid(df, mazs):

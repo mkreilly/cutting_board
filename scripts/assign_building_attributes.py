@@ -23,7 +23,7 @@ buildings_linked_to_parcels = gpd.read_geocsv(
 
 # this file contains mapping of blocks to mazs to tazs, but we want
 # the maz to taz mapping
-maz_to_taz = pd.read_csv("GeogXWalk2010_Blocks_MAZ_TAZ.csv").\
+maz_to_taz = pd.read_csv("data/GeogXWalk2010_Blocks_MAZ_TAZ.csv").\
     drop_duplicates(subset=["MAZ_ORIGINAL"]).\
     set_index("MAZ_ORIGINAL").TAZ_ORIGINAL
 

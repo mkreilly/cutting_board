@@ -10,7 +10,7 @@ sectors = [
   'man_tech', 'logis', 'ret_reg', 'ret_loc', 'transp', 'info', 'fire',
   'serv_pers', 'lease', 'prof', 'serv_bus', 'ed_k12', 'ed_high',
   'ed_oth', 'health', 'serv_soc', 'art_rec', 'hotel', 'eat', 'gov']
-maz_controls = pd.read_csv("maz_controls.csv", index_col="MAZ_ORIGINAL")
+maz_controls = pd.read_csv("data/maz_controls.csv", index_col="MAZ_ORIGINAL")
 buildings = gpd.read_geocsv(args[0], index_col="building_id")
 
 
