@@ -1,5 +1,8 @@
 import geopandas as gpd
 
+# not used anymore - converts esri jobs shapefile to a csv
+# see assign_jobs_lat_lng.py
+
 gdf = gpd.GeoDataFrame.from_file("est10_esri_gt1.shp")
 gdf = gdf.to_crs(epsg=4326)
 

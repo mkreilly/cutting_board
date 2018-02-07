@@ -4,28 +4,24 @@ import sys
 
 args = sys.argv[1:]
 
-# TODO
-# combine files deal with duplicate ids
-
-
 def initialize_census_for_region():
-    os.system('python fetch_census_data.py')
-    os.system('python block_to_maz_controls.py')
+    os.system('python scripts/fetch_census_data.py')
+    os.system('python scripts/block_to_maz_controls.py')
 
 
 def initialize_county(county):
     print "Processing data for {}".format(county)
-    os.system('python split_by_city.py "%s"' % county)
+    os.system('python scripts/split_by_city.py "%s"' % county)
 
 
 def run_jurises(juris):
     print "Processing data for {}".format(juris)
-    os.system('python fetch_buildings.py "%s"' % juris)
-    os.system('python self_intersections.py "%s"' % juris)
-    os.system('python split_parcels.py "%s"' % juris)
-    os.system('python join_buildings_to_parcels.py "%s"' % juris)
-    os.system('python assign_building_attributes.py "%s"' % juris)
-    os.system('python match_unit_controls.py "%s"' % juris)
+    os.system('python scripts/fetch_buildings.py "%s"' % juris)
+    os.system('python scripts/self_intersections.py "%s"' % juris)
+    os.system('python scripts/split_parcels.py "%s"' % juris)
+    os.system('python scripts/join_buildings_to_parcels.py "%s"' % juris)
+    os.system('python scripts/assign_building_attributes.py "%s"' % juris)
+    os.system('python scripts/match_unit_controls.py "%s"' % juris)
 
 pool = Pool(4)
 counties = ["Solano", "Sonoma", "San Francisco", "San Mateo",
