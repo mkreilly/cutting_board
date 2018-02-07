@@ -3,6 +3,12 @@ import pandas as pd
 import shared
 import osmnx
 
+# this script is used to assign an ESRI jobs dataset which comes with lat-lng
+# locations.  We're not using this right now - instead we're using assign_jobs.py
+# which uses maz-level control totals to place jobs.  This is subject to change
+# in the future, and is mostly to keep private data out of the UrbanSim micro
+# data in order to be able to release all of our data as a public download.
+
 print "Reading data"
 buildings = gpd.read_geocsv(
     "cache/buildings_match_controls.csv", index_col="building_id")
