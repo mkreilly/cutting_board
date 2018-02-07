@@ -1,12 +1,24 @@
 # cutting_board
 
-This is a set of scripts which is used to create parcels, buildings, households, and jobs datasets as inputs to MTC's UrbanSim model.  There is a rich history of practice in doing this and many examples to follow (most recently the Spandex scripts from Synthicity) - this set of scripts aims to keep things simple by 1) using only csv files as inputs and outputs 2) using geopandas instead of postgis for all spatial operations thus eliminating the need for db install, and 3) parallelizing by city for most steps, which allows multiprocessing for speed up.  The whole process takes about 40 hours in compute time but can run in about 11 hours on 4 cpus on an Amazon EC2 machine.
+#### Summary
 
-The main problem we're trying to solve it twofold.  First now that MTC's travel model system has a set of MAZs instead of TAZs (40k zones instead of 1.5k), there are many parcels that are larger than MAZs, and many large parcels in general.  We want to be able to locate the actual source and destinations of travel on those parcels by actually locating the buildings on the parcel, and we do that by using OpenStreetMaps significant (but not entirely complete) building footprint dataset.  This also helps us disaggregate parcel data within the parcel to buildings on the parcel.  For example, Berkeley's campus is a single parcel, but 5 or so MAZs.  Locating the building footprints on the parcel helps us know where the actual travel origins and destinations are on the campus.
+This is a set of scripts which is used to create parcels, buildings, households, and jobs datasets as inputs to MTC's UrbanSim model.  There is a rich history of practice in doing this and many examples to follow (most recently the Spandex scripts from Synthicity) - this set of scripts aims to keep things simple by 1) using only csv files as inputs and outputs 2) using geopandas instead of postgis for all spatial operations thus eliminating the need for db install, and 3) parallelizing by city for most steps, which allows multiprocessing for performance.  The whole process takes about 40 hours in compute time but can run in about 11 hours on 4 cpus on an Amazon EC2 machine.
 
-The second reason for doing this is to attempt to identify parcels which are built up on one area of the parcel, but which are not on another large contiguous area, usually from being used for parking in shopping malls or corporate campuses.  Where there is a lot of pressure for development, these parking lots are ripe for redevelopment, and if we don't consider sub-parcel areas we can't know which parcels are fully covered by a short building, and which parcels have a modest height building on part of the parcel and a parking lot on the other side.
+The main problem we're trying to solve it twofold.  First, now that MTC's travel model system runs using MAZs instead of TAZs (40k zones instead of 1.5k), there are many parcels that are larger than MAZs, and many large parcels in general.  We want to be able to locate the actual sources and destinations of travel on those parcels by locating the buildings on the parcel, and we do that by using OpenStreetMap's significant (but not entirely complete) building footprint dataset.  This also helps us disaggregate parcel data within the parcel to buildings on the parcel.  For example, Berkeley's campus is a single parcel, but 5 or so MAZs.  Locating the building footprints on the parcel helps us know where the actual travel origins and destinations are on the campus.
 
-#### Proposed Methodlogy (Completed)
+The second reason for doing this is to attempt to identify parcels which are built up on one area of the parcel, but which have little to no development on another large contiguous area, usually from being used for parking - e.g. in shopping malls and corporate campuses.  Where there is a lot of pressure for development, these parking lots are ripe for redevelopment, and if we don't consider sub-parcel areas we can't know which parcels are fully covered by a short building, and which parcels have a modest height building on part of the parcel and a parking lot on the other part.
+
+All data is included in this repo except for the parcel data, which is stored in the Basis repo.  I tried to fetch the Basis parcel files over the internet, but can't figure out how to get a web link to a LFS file from Github.
+
+#### Methodlogy
+
+* Run orchestration (run.py)
+  * run.py (which does not use orca for orchestration) is responsible for reading in the list of jurisdictions and processing them one at a time.  The set of scripts which is run on each jurisdiction is decribed one a a time below.  There are three preparation steps which run before the list of jurisdictions is processed.
+    1) census data (controls for unit counts) for the region is fetched using fetch_census_data.py
+    2) the census data above is aggregated from block to maz using block-to-maz map
+    3) the counties are run in order and jurisdictions are assigned and parcels are split by jurisdiction (a list of jurisdictions is also kept)
+
+* Fetch buildings from OSM (fetch_buildings.py
 
 * Split parcel geometry by MAZ
   * Parcels with a single MAZ intersection are assigned to that MAZ
