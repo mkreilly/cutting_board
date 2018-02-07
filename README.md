@@ -60,3 +60,9 @@ All data is included in this repo except for the parcel data, which is stored in
   
 * Assign jobs (assign_jobs.py)
   * This takes the controls from maz_controls.csv and creates records for every job and assigns a building id for each job record.  It also increases the number of job spaces in buildings that are overfull from this process (which happens a lot because non_residential_sqft is not a reliable field in the parcel data.  Right now we use our jobs dataset at the maz level as the data which controls how much non-res space to assign (rather than using CoStar).  This is so that we can publicly release all of our data as CoStar is private data and past datasets based on CoStar have had to be kept private.  This step creates "cache/buildings_adjusted_for_jobs.csv" and "cache/jobs.py"
+  
+#### If you're keeping score, final files at the time of this writing are:
+* households.csv
+* jobs.csv
+* buildings_adjusted_for_jobs.csv
+* merged_parcels.csv
