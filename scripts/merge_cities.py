@@ -1,5 +1,7 @@
 import glob
 import pandas as pd
+import geopandas as gpd
+import shared
 import numpy as np
 
 buildings = glob.glob("cache/*buildings_match_controls.csv")
@@ -32,16 +34,36 @@ buildings = pd.concat([unique_buildings, dup_buildings])
 
 buildings["osm_building_id"] = buildings.building_id
 buildings["building_id"] = np.arange(len(buildings))+1
+buildings["maz_id"] = buildings.maz_id.astype("int")
 
 buildings.to_csv("cache/merged_buildings.csv", index=False)
 
 parcels = glob.glob("cache/*moved_attribute_parcels.csv")
 juris_names = [p.replace("_moved_attribute_parcels.csv", "").
                replace("cache/", "") for p in parcels]
-parcels = [pd.read_csv(p) for p in parcels]
+parcels = [gpd.read_geocsv(p) for p in parcels]
 for i in range(len(parcels)):
     parcels[i]["juris_name"] = juris_names[i]
-parcels = pd.concat(parcels)
+parcels = gpd.GeoDataFrame(pd.concat(parcels))
+
+print "Assigning old zone ids using spatial join"
+old_zones = gpd.read_geocsv("data/old_zones.csv")
+old_zones["old_zone_id"] = old_zones["ZONE_ID"]
+old_zones = old_zones[["old_zone_id", "geometry"]]
+# do a centroid join with the old tazs
+parcels["real_geometry"] = parcels.geometry
+parcels["geometry"] = parcels.centroid
+parcels["x"] = [g.x for g in parcels.geometry]
+parcels["y"] = [g.y for g in parcels.geometry]
+parcels = gpd.sjoin(
+    parcels, old_zones, how="left", op="intersects")
+parcels["geometry"] = parcels.real_geometry
+del parcels["real_geometry"]
+del parcels["index_right"]
+parcels["maz_id"] = parcels.maz_id.astype("int")
+parcels["taz_id"] = parcels.taz_id.fillna(-1).astype("int")
+parcels["old_zone_id"] = parcels.old_zone_id.fillna(-1).astype("int")
+print "Done assigning old zone ids using spatial join"
 
 mask = pd.to_numeric(parcels.apn, errors="coerce") < 100000
 unique_parcels = parcels[~mask].copy()

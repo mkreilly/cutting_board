@@ -13,22 +13,6 @@ sectors = [
 maz_controls = pd.read_csv("data/maz_controls.csv", index_col="MAZ_ORIGINAL")
 buildings = gpd.read_geocsv(args[0], index_col="building_id")
 
-
-# there are at least 2 reasons right now to have a dummy building per maz which
-# does not technically have a parcel link - 1) for group quarters and 2) for
-# jobs in mazs which have no building.  instead of just randomly selecting a
-# parcel to add a building record to, we leave them associated with each maz
-def add_dummy_buildings_per_maz(buildings):
-    dummy_df = pd.DataFrame({"maz_id": maz_controls.index})
-    dummy_df["name"] = "MAZ-level dummy building"
-    dummy_df.index = ["MAZBLDG-" + str(d) for d in dummy_df.maz_id.values]
-    df = pd.concat([buildings, dummy_df])
-    df.index.name = "building_id"
-    return df
-
-buildings = add_dummy_buildings_per_maz(buildings)
-    
-
 sqft_per_job = {
   "HS": 400,
   "HT": 400,
