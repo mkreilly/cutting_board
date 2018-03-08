@@ -57,8 +57,6 @@ parcels["x"] = [g.x for g in parcels.geometry]
 parcels["y"] = [g.y for g in parcels.geometry]
 parcels = gpd.sjoin(
     parcels, old_zones, how="left", op="intersects")
-parcels["geometry"] = parcels.real_geometry
-del parcels["real_geometry"]
 del parcels["index_right"]
 parcels["maz_id"] = parcels.maz_id.astype("int")
 parcels["taz_id"] = parcels.taz_id.fillna(-1).astype("int")
@@ -76,5 +74,26 @@ parcels = pd.concat([unique_parcels, dup_parcels])
 # instead this should be 4 character abbreviations
 parcels["apn"] = parcels.juris_name.str.cat(
     parcels.apn.astype("str"), sep="-")
+
+# load and spatially join policy zones and general plan areas
+# to parcels, selecting general plan areas with priority 1 first
+# where shapes overlap
+p_zones = gpd.read_file('~/src/scratchpad/data/policy_zones.geojson')
+genplan = gpd.read_geocsv('~/src/basis/output/merged_general_plan_data.csv')
+genplan.rename(columns={'city':'general_plan_city'}, inplace=True)
+del genplan['id']
+
+parcels = gpd.sjoin(
+    parcels, p_zones, how="left", op="intersects")
+del parcels['index_right']
+parcels = gpd.sjoin(
+    parcels, genplan, how="left", op="intersects")
+parcels = parcels.sort_values('priority').drop_duplicates('apn')
+del parcels["index_right"]
+
+parcels = parcels.sort_values('priority').drop_duplicates('apn')
+
+parcels["geometry"] = parcels.real_geometry
+del parcels["real_geometry"]
 
 parcels.to_csv("cache/merged_parcels.csv", index=False)
