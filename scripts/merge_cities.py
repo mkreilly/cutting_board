@@ -78,8 +78,8 @@ parcels["apn"] = parcels.juris_name.str.cat(
 # load and spatially join policy zones and general plan areas
 # to parcels, selecting general plan areas with priority 1 first
 # where shapes overlap
-p_zones = gpd.read_file('~/src/scratchpad/data/policy_zones.geojson')
-genplan = gpd.read_geocsv('~/src/basis/output/merged_general_plan_data.csv')
+p_zones = gpd.read_file('cache/data/policy_zones.geojson')
+genplan = gpd.read_geocsv('cache/merged_general_plan_data.csv')
 genplan.rename(columns={'city':'general_plan_city'}, inplace=True)
 del genplan['id']
 
