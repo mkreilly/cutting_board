@@ -79,9 +79,9 @@ parcels["apn"] = parcels.juris_name.str.cat(
 # load and spatially join policy zones and general plan areas
 # to parcels, selecting general plan areas with priority 1 first
 # where shapes overlap
-p_zones = gpd.read_file('cache/data/policy_zones.geojson')
+p_zones = gpd.read_file('cache/policy_zones.geojson')
 genplan = gpd.read_geocsv('cache/merged_general_plan_data.csv')
-genplan.rename(columns={'city':'general_plan_city'}, inplace=True)
+genplan.rename(columns={'city': 'general_plan_city'}, inplace=True)
 del genplan['id']
 
 parcels = gpd.sjoin(
@@ -97,4 +97,7 @@ parcels = parcels.sort_values('priority').drop_duplicates('apn')
 parcels["geometry"] = parcels.real_geometry
 del parcels["real_geometry"]
 
-parcels.to_csv("cache/merged_parcels.csv", index=False)
+parcels[['apn', 'county_id', 'geometry', 'maz_id',
+         'taz_id', 'orig_apn', 'juris_name', 'shape_area',
+         'x', 'y', 'old_zone_id', 'zoningmodcat', 'general_plan_city',
+         'general_plan_name']].to_csv("cache/merged_parcels.csv", index=False)
