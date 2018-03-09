@@ -50,6 +50,7 @@ print "Assigning old zone ids using spatial join"
 old_zones = gpd.read_geocsv("data/old_zones.csv")
 old_zones["old_zone_id"] = old_zones["ZONE_ID"]
 old_zones = old_zones[["old_zone_id", "geometry"]]
+parcels["shape_area"] = shared.compute_area(parcels)
 # do a centroid join with the old tazs
 parcels["real_geometry"] = parcels.geometry
 parcels["geometry"] = parcels.centroid

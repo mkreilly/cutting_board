@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import geopandas as gpd
 import shared
 import sys
 
@@ -11,7 +10,7 @@ sectors = [
   'serv_pers', 'lease', 'prof', 'serv_bus', 'ed_k12', 'ed_high',
   'ed_oth', 'health', 'serv_soc', 'art_rec', 'hotel', 'eat', 'gov']
 maz_controls = pd.read_csv("data/maz_controls.csv", index_col="MAZ_ORIGINAL")
-buildings = gpd.read_geocsv(args[0], index_col="building_id")
+buildings = pd.read_csv(args[0], index_col="building_id")
 
 sqft_per_job = {
   "HS": 400,
