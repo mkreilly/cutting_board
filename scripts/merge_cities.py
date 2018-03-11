@@ -64,17 +64,12 @@ parcels["taz_id"] = parcels.taz_id.fillna(-1).astype("int")
 parcels["old_zone_id"] = parcels.old_zone_id.fillna(-1).astype("int")
 print "Done assigning old zone ids using spatial join"
 
-mask = pd.to_numeric(parcels.apn, errors="coerce") < 100000
-unique_parcels = parcels[~mask].copy()
-dup_parcels = parcels[mask].copy()
-
-dup_parcels["apn"] = np.arange(len(dup_parcels))+1
-parcels = pd.concat([unique_parcels, dup_parcels])
-
 # FIXME this appends the whole juris name to the apn to make it unique
 # instead this should be 4 character abbreviations
 parcels["apn"] = parcels.juris_name.str.cat(
     parcels.apn.astype("str"), sep="-")
+
+print "Loading policy zones and general plan data"
 
 # load and spatially join policy zones and general plan areas
 # to parcels, selecting general plan areas with priority 1 first
@@ -84,6 +79,8 @@ genplan = gpd.read_geocsv('cache/merged_general_plan_data.csv')
 genplan.rename(columns={'city': 'general_plan_city'}, inplace=True)
 del genplan['id']
 
+print "Assigning policy zone and general plan ids using spatial join"
+
 parcels = gpd.sjoin(
     parcels, p_zones, how="left", op="intersects")
 del parcels['index_right']
@@ -91,6 +88,8 @@ parcels = gpd.sjoin(
     parcels, genplan, how="left", op="intersects")
 parcels = parcels.sort_values('priority').drop_duplicates('apn')
 del parcels["index_right"]
+
+print "Done assigning policy zone and general plan ids"
 
 parcels = parcels.sort_values('priority').drop_duplicates('apn')
 
