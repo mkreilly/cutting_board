@@ -84,6 +84,7 @@ print "Assigning policy zone and general plan ids using spatial join"
 parcels = gpd.sjoin(
     parcels, p_zones, how="left", op="intersects")
 del parcels['index_right']
+parcels.rename(columns={'zoningmodc': 'zoningmodcat'}, inplace=True)
 parcels = gpd.sjoin(
     parcels, genplan, how="left", op="intersects")
 parcels = parcels.sort_values('priority').drop_duplicates('apn')
