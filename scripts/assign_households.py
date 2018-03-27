@@ -23,21 +23,6 @@ households = households[households.GQFlag == 0]
 gq_households["building_id"] = [
   "MAZBLDG-" + str(d) for d in gq_households.maz_id.values]
 
-
-# there are at least 2 reasons right now to have a dummy building per maz which
-# does not technically have a parcel link - 1) for group quarters and 2) for
-# jobs in mazs which have no building.  instead of just randomly selecting a
-# parcel to add a building record to, we leave them associated with each maz
-def add_dummy_buildings_per_maz(buildings):
-    dummy_df = pd.DataFrame({"maz_id": maz_controls.MAZ_ORIGINAL})
-    dummy_df["name"] = "MAZ-level dummy building"
-    dummy_df.index = ["MAZBLDG-" + str(d) for d in dummy_df.maz_id.values]
-    df = pd.concat([buildings, dummy_df])
-    df.index.name = "building_id"
-    return df
-
-buildings = add_dummy_buildings_per_maz(buildings)
-
 buildings["residential_units"] = \
     buildings.residential_units.fillna(0).astype("int")
 
