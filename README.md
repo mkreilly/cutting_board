@@ -55,6 +55,8 @@ All data is included in this repo except for the parcel data, which is stored in
 
 * First the parcel and building data is merged for all jurisdictions (merge_cities.py), including some modifications to the building and parcel ids.  This creates "cache/merged_parcels.csv" and "cache/merged_buildings.csv"
 
+* Second all spatial joins are done in spatial_joins.py.  This is a separate step from above only because the spatial joins take so long to run.
+
 * Assign households (assign_households.py)
   * The controls for household assignment actually come from the maz_controls.py, but the households have already been synthesized in work by another consultant.  The job here is to read in the households.csv (stored in the repo as data/households.csv.zip) and assign a building_id based on the maz_id already assigned to the household.  We don't currently use a model to assign specific households to appropriate building types, but we could (MAZs probably are more homogeneous in building types than TAZs would be, so this isn't a huge deal).  We also increase the number of units in a building if we end up with more households than units (technically this shouldn't happen as both units and household counts come from the census, but it does happen for reasons we don't yet understand).  This creates "cache/buildings_adjusted_for_households.csv" and "cache/households.csv".
   
