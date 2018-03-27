@@ -4,6 +4,9 @@ import geopandas as gpd
 import shared
 import numpy as np
 
+xwalk = pd.read_csv('data/GeogXWalk2010_Blocks_MAZ_TAZ.csv')
+maz_controls = pd.read_csv("data/maz_controls.csv")
+
 buildings = glob.glob("cache/*buildings_match_controls.csv")
 juris_names = [b.replace("_buildings_match_controls.csv", "").
                replace("cache/", "") for b in buildings]
@@ -18,6 +21,12 @@ buildings = pd.concat(buildings)
 # instead this should be 4 character abbreviations
 buildings["apn"] = buildings.juris_name.str.cat(
     buildings.apn.astype("str"), sep="-")
+
+buildings.loc[buildings.building_type == 'RT', 'building_type'] = 'HT'
+buildings.loc[buildings.building_type == 'RC', 'building_type'] = 'REC'
+buildings.loc[buildings.building_type == 0.0, 'building_type'] = ''
+buildings = buildings.loc[~buildings.building_type.isin(['VAC', 'VA',
+                                                         'VT', 'VP'])]
 
 # we assign counting numbers to building ids when we create a circular
 # buildling footprint on a parcel centroid.  when we take them from osm
@@ -36,7 +45,29 @@ buildings["osm_building_id"] = buildings.building_id
 buildings["building_id"] = np.arange(len(buildings))+1
 buildings["maz_id"] = buildings.maz_id.astype("int")
 
-buildings.to_csv("cache/merged_buildings.csv", index=False)
+# there are at least 2 reasons right now to have a dummy building per maz which
+# does not technically have a parcel link - 1) for group quarters and 2) for
+# jobs in mazs which have no building.  instead of just randomly selecting a
+# parcel to add a building record to, we leave them associated with each maz
+
+
+def add_dummy_buildings_per_maz(buildings):
+    dummy_df = pd.DataFrame({"maz_id": maz_controls.MAZ_ORIGINAL})
+    dummy_df["name"] = "MAZ-level dummy building"
+    dummy_df['building_id'] = ["MAZBLDG-" + str(d) for d in dummy_df.maz_id.values]
+    df = pd.concat([buildings, dummy_df])
+    #df.index.name = "building_id"
+    return df
+
+
+buildings = add_dummy_buildings_per_maz(buildings)
+
+buildings.loc[buildings.name == 'MAZ-level dummy building', 'apn'] = \
+    buildings.loc[buildings.name == 'MAZ-level dummy building',
+                  'building_id'].str.replace('BLDG', 'PCL')
+
+buildings.drop('geometry', axis=1).to_csv("cache/merged_buildings.csv", index=False)
+buildings[['building_id', 'geometry']].to_csv("cache/buildings_geography.csv", index=False)
 
 parcels = glob.glob("cache/*moved_attribute_parcels.csv")
 juris_names = [p.replace("_moved_attribute_parcels.csv", "").
@@ -46,58 +77,21 @@ for i in range(len(parcels)):
     parcels[i]["juris_name"] = juris_names[i]
 parcels = gpd.GeoDataFrame(pd.concat(parcels))
 
-print "Assigning old zone ids using spatial join"
-old_zones = gpd.read_geocsv("data/old_zones.csv")
-old_zones["old_zone_id"] = old_zones["ZONE_ID"]
-old_zones = old_zones[["old_zone_id", "geometry"]]
-parcels["shape_area"] = shared.compute_area(parcels)
-# do a centroid join with the old tazs
-parcels["real_geometry"] = parcels.geometry
-parcels["geometry"] = parcels.centroid
-parcels["x"] = [g.x for g in parcels.geometry]
-parcels["y"] = [g.y for g in parcels.geometry]
-parcels = gpd.sjoin(
-    parcels, old_zones, how="left", op="intersects")
-del parcels["index_right"]
-parcels["maz_id"] = parcels.maz_id.astype("int")
-parcels["taz_id"] = parcels.taz_id.fillna(-1).astype("int")
-parcels["old_zone_id"] = parcels.old_zone_id.fillna(-1).astype("int")
-print "Done assigning old zone ids using spatial join"
-
 # FIXME this appends the whole juris name to the apn to make it unique
 # instead this should be 4 character abbreviations
 parcels["apn"] = parcels.juris_name.str.cat(
     parcels.apn.astype("str"), sep="-")
 
-print "Loading policy zones and general plan data"
+maz_pcls = xwalk.groupby('MAZ_ORIGINAL').TAZ_ORIGINAL.first()
+mazpcl_dummies = buildings.loc[buildings.name == 'MAZ-level dummy building',
+                               ['apn', 'maz_id']]
+mazpcl_dummies['taz_id'] = mazpcl_dummies.maz_id.map(maz_pcls)
+for col in parcels.columns[~parcels.columns.isin(mazpcl_dummies.columns)]:
+    mazpcl_dummies[col] = np.nan
+parcels = pd.concat([parcels, mazpcl_dummies])
 
-# load and spatially join policy zones and general plan areas
-# to parcels, selecting general plan areas with priority 1 first
-# where shapes overlap
-p_zones = gpd.read_file('cache/policy_zones.geojson')
-genplan = gpd.read_geocsv('cache/merged_general_plan_data.csv')
-genplan.rename(columns={'city': 'general_plan_city'}, inplace=True)
-del genplan['id']
+parcels["maz_id"] = parcels.maz_id.astype("int")
+parcels["taz_id"] = parcels.taz_id.fillna(-1).astype("int")
 
-print "Assigning policy zone and general plan ids using spatial join"
-
-parcels = gpd.sjoin(
-    parcels, p_zones, how="left", op="intersects")
-del parcels['index_right']
-parcels.rename(columns={'zoningmodc': 'zoningmodcat'}, inplace=True)
-parcels = gpd.sjoin(
-    parcels, genplan, how="left", op="intersects")
-parcels = parcels.sort_values('priority').drop_duplicates('apn')
-del parcels["index_right"]
-
-print "Done assigning policy zone and general plan ids"
-
-parcels = parcels.sort_values('priority').drop_duplicates('apn')
-
-parcels["geometry"] = parcels.real_geometry
-del parcels["real_geometry"]
-
-parcels[['apn', 'county_id', 'geometry', 'maz_id',
-         'taz_id', 'orig_apn', 'juris_name', 'shape_area',
-         'x', 'y', 'old_zone_id', 'zoningmodcat', 'general_plan_city',
-         'general_plan_name']].to_csv("cache/merged_parcels.csv", index=False)
+parcels[['apn', 'county_id', 'geometry', 'maz_id', 'taz_id', 'orig_apn',
+         'juris_name']].to_csv("cache/merged_parcels.csv", index=False)
