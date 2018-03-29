@@ -28,21 +28,7 @@ buildings.loc[buildings.building_type == 0.0, 'building_type'] = ''
 buildings = buildings.loc[~buildings.building_type.isin(['VAC', 'VA',
                                                          'VT', 'VP'])]
 
-# we assign counting numbers to building ids when we create a circular
-# buildling footprint on a parcel centroid.  when we take them from osm
-# we use the osm_id.  So the osm_ids are unique but the circular building
-# ids are duplicate across cities.  Fortunately the osm buildings ids are
-# very large and we can pick an arbitrary cutoff and create globally
-# unique building ids for those
-mask = pd.to_numeric(buildings.building_id, errors="coerce") < 100000
-unique_buildings = buildings[~mask].copy()
-dup_buildings = buildings[mask].copy()
-
-dup_buildings["building_id"] = np.arange(len(dup_buildings))+1
-buildings = pd.concat([unique_buildings, dup_buildings])
-
-buildings["osm_building_id"] = buildings.building_id
-buildings["building_id"] = np.arange(len(buildings))+1
+buildings.drop("building_id", axis=1, inplace=True)
 buildings["maz_id"] = buildings.maz_id.astype("int")
 
 # there are at least 2 reasons right now to have a dummy building per maz which
@@ -54,20 +40,25 @@ buildings["maz_id"] = buildings.maz_id.astype("int")
 def add_dummy_buildings_per_maz(buildings):
     dummy_df = pd.DataFrame({"maz_id": maz_controls.MAZ_ORIGINAL})
     dummy_df["name"] = "MAZ-level dummy building"
-    dummy_df['building_id'] = ["MAZBLDG-" + str(d) for d in dummy_df.maz_id.values]
+    dummy_df['maz_building_id'] = [
+        "MAZBLDG-" + str(d) for d in dummy_df.maz_id.values]
     df = pd.concat([buildings, dummy_df])
-    #df.index.name = "building_id"
     return df
-
 
 buildings = add_dummy_buildings_per_maz(buildings)
 
 buildings.loc[buildings.name == 'MAZ-level dummy building', 'apn'] = \
     buildings.loc[buildings.name == 'MAZ-level dummy building',
-                  'building_id'].str.replace('BLDG', 'PCL')
+                  'maz_building_id'].str.replace('BLDG', 'PCL')
 
-buildings.drop('geometry', axis=1).to_csv("cache/merged_buildings.csv", index=False)
-buildings[['building_id', 'geometry']].to_csv("cache/buildings_geography.csv", index=False)
+buildings.reset_index(drop=True, inplace=True)
+buildings.index += 1
+
+buildings.drop('geometry', axis=1).to_csv(
+     "cache/merged_buildings.csv", index_label="building_id")
+buildings[['geometry']].to_csv(
+     "cache/buildings_geometry.csv", index_label="building_id")
+print "Finished writing buildings"
 
 parcels = glob.glob("cache/*moved_attribute_parcels.csv")
 juris_names = [p.replace("_moved_attribute_parcels.csv", "").

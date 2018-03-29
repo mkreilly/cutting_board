@@ -7,7 +7,7 @@ import sys
 args = sys.argv[1:]
 
 households = pd.read_csv("data/households.csv", index_col="HHID")
-buildings = gpd.read_geocsv(args[0], index_col="building_id")
+buildings = pd.read_csv(args[0], index_col="building_id")
 maz_controls = pd.read_csv("data/maz_controls.csv")
 
 households["maz_id"] = \

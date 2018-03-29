@@ -5,6 +5,7 @@ import shared
 import numpy as np
 from shapely import wkt
 
+
 def read_geocsv(*args, **kwargs):
     df = pd.read_csv(*args, **kwargs)
     df.loc[df.geometry.notnull(), 'geometry'] = \
@@ -73,4 +74,5 @@ parcels = pd.concat([parcels, dummy_pcl])
 parcels[['apn', 'county_id', 'geometry', 'maz_id',
          'taz_id', 'orig_apn', 'juris_name', 'shape_area',
          'x', 'y', 'old_zone_id', 'zoningmodcat', 'general_plan_city',
-         'general_plan_name']].to_csv("cache/parcels_geography.csv", index=False)
+         'general_plan_name']].to_csv(
+    "cache/parcels_geography.csv", index=False)
